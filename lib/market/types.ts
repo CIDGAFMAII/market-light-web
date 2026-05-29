@@ -1,7 +1,8 @@
 import type { MarketStatus } from "../market-status";
 
-export type MarketSource = "TWSE" | "OKX" | "DEMO" | "CACHE";
+export type MarketSource = "TWSE" | "OKX" | "FINMIND" | "DEMO" | "CACHE";
 export type MarketName = "TWSE" | "OKX";
+export type QuoteQuality = "latest" | "partial" | "daily" | "fallback";
 
 export type MarketData = {
   symbol: string;
@@ -15,7 +16,9 @@ export type MarketData = {
   low: number;
   volume: number;
   tradeTime: string;
+  tradeDate?: string;
   source: MarketSource;
+  quoteQuality?: QuoteQuality;
   status: MarketStatus;
   message: string;
   stale?: boolean;
@@ -28,6 +31,7 @@ export type ProviderResult<T = MarketData> = {
   data?: T;
   message?: string;
   warning?: string;
+  debug?: unknown;
 };
 
 export type MarketTarget = {

@@ -2,7 +2,6 @@ import { getMarketStatus, type MarketStatus } from "../market-status";
 import { findMarketCache, upsertMarketCache } from "./cache";
 import { getDemoMarketItem, getDemoMarketItems } from "./demo-provider";
 import { fetchOkxTicker } from "./providers/okx-ticker";
-import { fetchTwseStock } from "./providers/twse";
 import type { MarketData, MarketTarget } from "./types";
 
 export type MarketCollectionResult = {
@@ -38,17 +37,21 @@ export async function getMarketCollection({
   const warnings: string[] = [];
   const items = await Promise.all(
     enabledTargets.map(async (target) => {
-      const result =
-        target.market === "TWSE"
-          ? await fetchTwseStock({
-              symbol: target.symbol,
-              exchange: target.exchange,
-              displayName: target.displayName,
-            })
-          : await fetchOkxTicker({
-              instId: target.symbol,
-              displayName: target.displayName,
-            });
+      if (target.market === "TWSE") {
+        warnings.push("台股即時行情需正式授權資料源，目前以 Demo 資料展示流程。");
+        return {
+          ...getDemoMarketItem(target),
+          source: "DEMO" as const,
+          quoteQuality: "fallback" as const,
+          stale: true,
+          message: "Taiwan stock demo data for competition flow",
+        };
+      }
+
+      const result = await fetchOkxTicker({
+        instId: target.symbol,
+        displayName: target.displayName,
+      });
 
       if (result.success && result.data) {
         upsertMarketCache(result.data);
@@ -58,18 +61,22 @@ export async function getMarketCollection({
       const cached = findMarketCache(target.symbol, target.market);
       if (cached) {
         warnings.push(`${target.market} ${target.symbol} failed, using cache`);
-        if (target.market === "TWSE" && result.message === "No latest trade price") {
-          return {
-            ...cached,
-            status: "closed" as const,
-            message: "Market closed",
-          };
-        }
-        return cached;
+        return {
+          ...cached,
+          source: "CACHE" as const,
+          quoteQuality: "fallback" as const,
+          stale: true,
+        };
       }
 
+      const fallback = getDemoMarketItem(target);
       warnings.push(`${target.market} ${target.symbol} failed, using demo fallback`);
-      return getDemoMarketItem(target);
+      return {
+        ...fallback,
+        source: "DEMO" as const,
+        quoteQuality: "fallback" as const,
+        stale: true,
+      };
     }),
   );
 

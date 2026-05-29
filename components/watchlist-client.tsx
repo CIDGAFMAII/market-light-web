@@ -40,9 +40,9 @@ export function WatchlistClient() {
   const [items, setItems] = useState<WatchItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [origin, setOrigin] = useState("");
-  const [market, setMarket] = useState<WatchMarket>("TWSE");
-  const [symbol, setSymbol] = useState("2330");
-  const [displayName, setDisplayName] = useState("TSMC");
+  const [market, setMarket] = useState<WatchMarket>("OKX");
+  const [symbol, setSymbol] = useState("BTC-USDT");
+  const [displayName, setDisplayName] = useState("BTC");
   const [exchange, setExchange] = useState<"tse" | "otc">("tse");
   const [loadingId, setLoadingId] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -229,6 +229,9 @@ export function WatchlistClient() {
             <p className="mt-3 text-muted">
               在這裡選擇要同步到 ESP32 的股票或資產。使用 localStorage 管理自選清單，暫不寫入資料庫。
             </p>
+            <p className="mt-2 text-sm text-yellow">
+              競賽展示建議使用 OKX 加密貨幣。台股目前為 Demo 展示資料。
+            </p>
           </div>
           <StatusBadge status="calm" />
         </div>
@@ -241,7 +244,7 @@ export function WatchlistClient() {
               setSymbol(next === "OKX" ? "BTC-USDT" : "2330");
               setDisplayName(next === "OKX" ? "BTC" : "TSMC");
             }}>
-              <option value="TWSE">TWSE</option>
+              <option value="TWSE">TWSE Experimental / Demo</option>
               <option value="OKX">OKX</option>
             </select>
             <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={symbol} onChange={(event) => setSymbol(event.target.value)} placeholder={market === "OKX" ? "BTC-USDT" : "2330"} />

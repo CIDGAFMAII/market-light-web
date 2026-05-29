@@ -9,8 +9,7 @@ function cacheKey(symbol: string, market: MarketName) {
 export function upsertMarketCache(item: MarketData) {
   marketCache.set(cacheKey(item.symbol, item.market), {
     ...item,
-    source: item.market,
-    stale: false,
+    stale: item.stale ?? false,
     updatedAt: new Date().toISOString(),
   });
 }
@@ -23,6 +22,7 @@ export function findMarketCache(symbol: string, market: MarketName): MarketData 
   return {
     ...cached,
     source: "CACHE",
+    quoteQuality: "fallback",
     stale: true,
   };
 }
