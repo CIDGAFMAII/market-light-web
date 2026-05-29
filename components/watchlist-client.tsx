@@ -66,7 +66,7 @@ export function WatchlistClient() {
   }, [items, loaded]);
 
   const deviceSyncItems = useMemo(
-    () => items.filter((item) => item.enabled && item.syncToDevice),
+    () => items.filter((item) => item.syncToDevice),
     [items],
   );
   const deviceSymbolList = useMemo(
@@ -110,7 +110,7 @@ export function WatchlistClient() {
       ...current,
       createItem(market, cleanSymbol, cleanDisplayName, "tse"),
     ]);
-    setNotice({ tone: "success", message: `已新增 ${cleanSymbol}。` });
+    setNotice({ tone: "success", message: "已新增到自選資產，可到市場看盤的『我的自選』查看。" });
   }
 
   function updateItem(id: string, patch: Partial<WatchItem>) {
@@ -208,7 +208,7 @@ export function WatchlistClient() {
           <div>
             <Link href="/market" className="text-sm uppercase tracking-[0.18em] text-cyan">← 市場看盤</Link>
             <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">自選資產</h1>
-            <p className="mt-3 text-muted">選擇要顯示在 ESP32 上的資產。</p>
+            <p className="mt-3 text-muted">選擇要出現在市場看盤與 ESP32 上的資產。</p>
           </div>
           <StatusBadge status="calm" />
         </div>
@@ -264,7 +264,7 @@ export function WatchlistClient() {
                         顯示於 ESP32：{item.syncToDevice ? "是" : "否"}
                       </button>
                       <button type="button" onClick={() => updateItem(item.id, { enabled: !item.enabled })} className={`rounded border px-3 py-2 text-sm ${item.enabled ? "border-green-500/40 text-green-300" : "border-gray-500/40 text-muted"}`}>
-                        啟用：{item.enabled ? "是" : "否"}
+                        顯示在看盤：{item.enabled ? "是" : "否"}
                       </button>
                     </div>
                     <div className="flex justify-end">

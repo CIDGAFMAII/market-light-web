@@ -61,6 +61,9 @@ demo provider only
 - Real / Demo switch:
   - Real: `/api/public/market`
   - Demo: `/api/public/market?demoMode=true`
+- View switch:
+  - Default market: reads the system default list from `/api/public/market`
+  - My watchlist: reads enabled assets from the `/watchlist` `localStorage` list and requests `/api/device/market?symbols=...`
 - Auto refresh: `Off / 10s / 30s / 60s`
 - Compact market mood summary
 - Search by `symbol` or `displayName`
@@ -96,7 +99,7 @@ The default is International mode because the competition demo flow uses OKX cry
 
 ## Watchlist
 
-`/watchlist` manages a local watchlist with `localStorage`. It is also the setup page for choosing which stocks or assets are synchronized to the ESP32 display.
+`/watchlist` manages a local watchlist with `localStorage`. Enabled assets appear in `/market` under the My watchlist view, and assets marked for ESP32 display are saved to the device sync list.
 
 Competition demos should prefer OKX crypto assets. Taiwan stock entries are currently demo display data.
 
@@ -108,26 +111,24 @@ Supported actions:
 - Validate blank input and symbol format before adding
 - Show add success / failure messages
 - Delete items
-- Enable or disable items
-- Move items up or down
-- Mark `syncToDevice`
+- Show or hide items in the market watch page
+- Mark whether items are shown on the ESP32
 - Reset watchlist to defaults
-- Display the full device query URL, for example `http://localhost:3000/api/device/market?symbols=TWSE:2330,OKX:BTC-USDT`
-- Show the ESP32 sync list generated from `enabled=true` and `syncToDevice=true`
-- Copy the full Device API URL
-- Open the generated Device API URL in a new tab to inspect the JSON payload
+- Show the ESP32 sync list generated from `syncToDevice=true`
+- Keep developer API URLs in a collapsed developer details panel
 - Validate TWSE via `/api/provider/twse`
 - Validate OKX instruments via `/api/provider/okx/instruments`
 
-Only items with both flags enabled are included in the ESP32 sync URL:
+The two toggles have separate meanings:
 
 ```text
-enabled=true AND syncToDevice=true
+enabled=true        -> appears in /market under My watchlist
+syncToDevice=true   -> saved to the ESP32 device sync list
 ```
 
-Items with `enabled=false` are excluded even if `syncToDevice=true`. Items with `syncToDevice=false` are also excluded.
+Items with `syncToDevice=false` can still appear in `/market` when `enabled=true`, but they are excluded from `/api/device/market?deviceId=...` after saving the ESP32 device list.
 
-The page builds a complete URL with `window.location.origin`:
+The developer details panel builds a complete manual testing URL with `window.location.origin`:
 
 ```text
 http://localhost:3000/api/device/market?symbols=TWSE:0050,TWSE:2330,OKX:BTC-USDT
@@ -148,7 +149,7 @@ GET /api/device/config?deviceId=ML-ESP32-DEMO
 GET /api/device/market?deviceId=ML-ESP32-DEMO
 ```
 
-After the user changes `enabled` / `syncToDevice` and clicks `Save to ESP32 Device`, the page posts the generated `syncSymbols` list to:
+After the user changes `syncToDevice` and clicks `Save to ESP32 Device`, the page posts the generated `syncSymbols` list to:
 
 ```text
 POST /api/device/sync-symbols

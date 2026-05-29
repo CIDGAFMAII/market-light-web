@@ -24,7 +24,14 @@ type MarketFilter = "ALL" | "TWSE" | "OKX";
 type StatusFilter = "ALL" | "up" | "down" | "up_alert" | "down_alert" | "calm";
 type SourceModeSetting = "real" | "demo";
 type RefreshInterval = 0 | 10 | 30 | 60;
+type MarketViewMode = "default" | "watchlist";
+type StoredWatchItem = {
+  market?: string;
+  symbol?: string;
+  enabled?: boolean;
+};
 
+const watchlistStorageKey = "market-light-watchlist-v1";
 const sourceModeStorageKey = "market-light-market-source-mode-v1";
 const refreshStorageKey = "market-light-market-refresh-sec-v1";
 const refreshIntervals: RefreshInterval[] = [0, 10, 30, 60];
@@ -55,6 +62,8 @@ export function MarketBoardClient() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sourceModeSetting, setSourceModeSetting] = useState<SourceModeSetting>("real");
   const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(30);
+  const [marketViewMode, setMarketViewMode] = useState<MarketViewMode>("default");
+  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("changePercent");
   const [sortDesc, setSortDesc] = useState(true);
@@ -67,7 +76,30 @@ export function MarketBoardClient() {
     setError("");
 
     try {
-      const endpoint = sourceModeSetting === "demo" ? "/api/public/market?demoMode=true" : "/api/public/market";
+      let endpoint = sourceModeSetting === "demo" ? "/api/public/market?demoMode=true" : "/api/public/market";
+
+      if (marketViewMode === "watchlist") {
+        const enabledSymbols = getEnabledWatchlistSymbols();
+        setWatchlistSymbols(enabledSymbols);
+
+        if (enabledSymbols.length === 0) {
+          setItems([]);
+          setWarnings([]);
+          setUpdatedAt(new Date().toISOString());
+          setMarketMood("calm");
+          setSourceMode("MY_WATCHLIST");
+          return;
+        }
+
+        const params = new URLSearchParams({ symbols: enabledSymbols.join(",") });
+        if (sourceModeSetting === "demo") {
+          params.set("demoMode", "true");
+        }
+        endpoint = `/api/device/market?${params.toString()}`;
+      } else {
+        setWatchlistSymbols([]);
+      }
+
       const response = await fetch(endpoint, { cache: "no-store" });
       const json = (await response.json()) as MarketResponse;
 
@@ -85,7 +117,7 @@ export function MarketBoardClient() {
     } finally {
       setLoading(false);
     }
-  }, [sourceModeSetting]);
+  }, [marketViewMode, sourceModeSetting]);
 
   useEffect(() => {
     const savedSourceMode = window.localStorage.getItem(sourceModeStorageKey);
@@ -149,6 +181,10 @@ export function MarketBoardClient() {
     setSourceModeSetting(nextMode);
   }
 
+  function updateMarketViewMode(nextMode: MarketViewMode) {
+    setMarketViewMode(nextMode);
+  }
+
   function updateRefreshInterval(nextInterval: RefreshInterval) {
     setRefreshInterval(nextInterval);
     window.localStorage.setItem(refreshStorageKey, String(nextInterval));
@@ -164,6 +200,31 @@ export function MarketBoardClient() {
             <p className="mt-3 text-muted">OKX 加密貨幣為真實資料；台股目前以 Demo 資料展示 ESP32 同步與提醒流程。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1 rounded border border-white/10 bg-black/35 px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted">
+              <span className="px-1">View:</span>
+              <button
+                type="button"
+                onClick={() => updateMarketViewMode("default")}
+                className={`rounded px-2 py-1 transition ${
+                  marketViewMode === "default"
+                    ? "bg-cyan/15 text-cyan"
+                    : "text-muted hover:bg-white/5 hover:text-cyan"
+                }`}
+              >
+                預設市場
+              </button>
+              <button
+                type="button"
+                onClick={() => updateMarketViewMode("watchlist")}
+                className={`rounded px-2 py-1 transition ${
+                  marketViewMode === "watchlist"
+                    ? "bg-cyan/15 text-cyan"
+                    : "text-muted hover:bg-white/5 hover:text-cyan"
+                }`}
+              >
+                我的自選
+              </button>
+            </div>
             <PriceColorModeToggle mode={priceColorMode} onChange={setPriceColorMode} />
             <button
               type="button"
@@ -194,7 +255,7 @@ export function MarketBoardClient() {
               ))}
             </div>
             <Link href="/watchlist" className="rounded border border-[var(--border-pink)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-pink hover:bg-pink/10">
-              自選股
+              自選資產
             </Link>
             <button
               type="button"
@@ -240,6 +301,7 @@ export function MarketBoardClient() {
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted">
             <span>更新時間：{updatedAt ? new Date(updatedAt).toLocaleString("zh-TW") : "尚未更新"}</span>
             <span>顯示：{filteredItems.length} / {items.length}</span>
+            {marketViewMode === "watchlist" ? <span>我的自選：{watchlistSymbols.length}</span> : null}
             <span>Auto refresh: {refreshInterval === 0 ? "Off" : `${refreshInterval}s`}</span>
             <span>狀態摘要：{moodSummary}</span>
             {warnings.length > 0 ? (
@@ -255,8 +317,18 @@ export function MarketBoardClient() {
         <section className="mt-5">
           <TerminalPanel title="即時行情" label={loading ? "LOADING" : "LIVE"}>
             {loading && items.length === 0 ? <div className="p-6 text-muted">正在讀取真實資料...</div> : null}
-            {!loading && filteredItems.length === 0 ? <div className="p-6 text-muted">沒有符合條件的商品。</div> : null}
-            <div className="hidden border-b border-cyan/15 px-3 pb-2 text-xs uppercase tracking-[0.16em] text-muted md:grid md:grid-cols-[1.1fr_0.9fr_0.9fr_1fr_1fr_0.9fr_0.8fr]">
+            {!loading && marketViewMode === "watchlist" && watchlistSymbols.length === 0 ? (
+              <div className="flex flex-col gap-4 p-6 text-muted sm:flex-row sm:items-center sm:justify-between">
+                <span>尚未新增自選資產。前往 /watchlist 新增。</span>
+                <Link href="/watchlist" className="w-fit rounded border border-[var(--border-cyan)] px-4 py-2 text-sm text-cyan hover:bg-cyan/10">
+                  前往自選資產
+                </Link>
+              </div>
+            ) : null}
+            {!loading && filteredItems.length === 0 && !(marketViewMode === "watchlist" && watchlistSymbols.length === 0) ? (
+              <div className="p-6 text-muted">沒有符合條件的商品。</div>
+            ) : null}
+            {items.length > 0 ? <div className="hidden border-b border-cyan/15 px-3 pb-2 text-xs uppercase tracking-[0.16em] text-muted md:grid md:grid-cols-[1.1fr_0.9fr_0.9fr_1fr_1fr_0.9fr_0.8fr]">
               <span>商品</span>
               <span>價格</span>
               <span>漲跌</span>
@@ -264,7 +336,7 @@ export function MarketBoardClient() {
               <span>量 / 時間</span>
               <span>來源</span>
               <span className="text-right">狀態</span>
-            </div>
+            </div> : null}
             {filteredItems.map((item) => (
               <MarketRow key={`${item.market}:${item.symbol}`} item={item} priceColorMode={priceColorMode} />
             ))}
@@ -273,6 +345,35 @@ export function MarketBoardClient() {
       </div>
     </main>
   );
+}
+
+function getEnabledWatchlistSymbols() {
+  try {
+    const raw = window.localStorage.getItem(watchlistStorageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    const seen = new Set<string>();
+    const symbols: string[] = [];
+
+    for (const item of parsed as StoredWatchItem[]) {
+      const market = item.market === "OKX" || item.market === "TWSE" ? item.market : null;
+      const symbol = typeof item.symbol === "string" ? item.symbol.trim().toUpperCase() : "";
+
+      if (!market || !symbol || item.enabled !== true) continue;
+      if (market === "TWSE" && !/^\d+$/.test(symbol)) continue;
+      if (market === "OKX" && !/^[A-Z0-9]+-[A-Z0-9]+$/.test(symbol)) continue;
+
+      const token = `${market}:${symbol}`;
+      if (seen.has(token)) continue;
+      seen.add(token);
+      symbols.push(token);
+    }
+
+    return symbols;
+  } catch {
+    return [];
+  }
 }
 
 function MarketRow({ item, priceColorMode }: { item: MarketData; priceColorMode: PriceColorMode }) {
