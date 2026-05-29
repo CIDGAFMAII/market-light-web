@@ -5,6 +5,7 @@
  * 正式環境請替換為 JWT / next-auth session
  */
 import { prisma } from "./prisma";
+import { ensureDemoUsers } from "./demo-users";
 
 /** 從 header 取得 userId，未提供則回傳 null */
 export function getMockUserId(req: Request): string | null {
@@ -13,6 +14,7 @@ export function getMockUserId(req: Request): string | null {
 
 /** 驗證 userId 是否存在於資料庫，回傳 User 物件或 null */
 export async function getAuthUser(req: Request) {
+  await ensureDemoUsers();
   const userId = getMockUserId(req);
   if (userId) {
     const user = await prisma.user.findUnique({ where: { id: userId } });

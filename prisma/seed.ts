@@ -3,8 +3,7 @@
  * @description 初始化資料庫，建立兩組 demo 使用者、裝置、設定、股票、自選清單、桌寵
  * 使用方式: node --experimental-strip-types prisma/seed.ts
  */
-import prismaClientPkg from "../node_modules/.prisma/client/index.js";
-const { PrismaClient } = prismaClientPkg;
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 

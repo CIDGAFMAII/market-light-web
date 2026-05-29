@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchWithAuth } from "@/lib/client-auth";
 import { companionMessage, isCompanionMode, type CompanionMode } from "@/lib/companion";
 import { petFaces, type MarketStatus } from "@/lib/market-status";
 import { StatusBadge } from "./status-badge";
@@ -15,13 +16,8 @@ export function CompanionSettingsClient() {
 
   useEffect(() => {
     async function loadSettings() {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
       try {
-        const res = await fetch("/api/web/settings", {
-          headers: {
-            "x-user-id": userId,
-          },
-        });
+        const res = await fetchWithAuth("/api/web/settings", { cache: "no-store" });
         const data = await res.json();
         if (data.success && data.settings && isCompanionMode(data.settings.companionMode)) {
           setMode(data.settings.companionMode);
@@ -34,12 +30,10 @@ export function CompanionSettingsClient() {
   }, []);
 
   async function updateMode(nextMode: CompanionMode) {
-    const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
     try {
-      const res = await fetch("/api/web/settings", {
+      const res = await fetchWithAuth("/api/web/settings", {
         method: "PUT",
         headers: {
-          "x-user-id": userId,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ companionMode: nextMode }),
