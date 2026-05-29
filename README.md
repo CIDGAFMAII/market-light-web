@@ -1,5 +1,5 @@
 # Market Light
-
+ 
 Market Light is a Next.js MVP for a low-distraction market companion. This phase focuses on the website and market-data experience only. It does not include ESP32 Arduino firmware, Prisma, SQLite, or authentication.
 
 The UI has been refined into a darker Corporate Trust style: black / slate surfaces, subdued indigo-violet accents, cleaner SaaS-like controls, and lower visual noise. The data positioning is unchanged: OKX crypto is the primary real data path, while Taiwan stock rows remain clearly marked demo display data.
