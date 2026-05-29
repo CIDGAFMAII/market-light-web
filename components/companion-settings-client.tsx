@@ -6,7 +6,6 @@ import { petFaces, type MarketStatus } from "@/lib/market-status";
 import { StatusBadge } from "./status-badge";
 import { TerminalPanel } from "./terminal-panel";
 
-const storageKey = "market-light-companion-mode-v1";
 const statuses: MarketStatus[] = ["calm", "up", "up_alert", "down", "down_alert", "closed", "error"];
 
 export function CompanionSettingsClient() {
@@ -15,15 +14,43 @@ export function CompanionSettingsClient() {
   const message = companionMessage(status, mode);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(storageKey);
-    if (saved && isCompanionMode(saved)) {
-      setMode(saved);
+    async function loadSettings() {
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      try {
+        const res = await fetch("/api/web/settings", {
+          headers: {
+            "x-user-id": userId,
+          },
+        });
+        const data = await res.json();
+        if (data.success && data.settings && isCompanionMode(data.settings.companionMode)) {
+          setMode(data.settings.companionMode);
+        }
+      } catch (err) {
+        console.error("Failed to load settings from API", err);
+      }
     }
+    loadSettings();
   }, []);
 
-  function updateMode(nextMode: CompanionMode) {
-    setMode(nextMode);
-    window.localStorage.setItem(storageKey, nextMode);
+  async function updateMode(nextMode: CompanionMode) {
+    const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+    try {
+      const res = await fetch("/api/web/settings", {
+        method: "PUT",
+        headers: {
+          "x-user-id": userId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ companionMode: nextMode }),
+      });
+      const data = await res.json();
+      if (data.success && data.settings && isCompanionMode(data.settings.companionMode)) {
+        setMode(data.settings.companionMode);
+      }
+    } catch (err) {
+      console.error("Failed to update companion mode", err);
+    }
   }
 
   return (

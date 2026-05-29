@@ -6,7 +6,7 @@ import { isDetailChartRange } from "@/lib/market/providers/okx-candles";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const deviceId = searchParams.get("deviceId") || defaultDeviceId;
-  const config = getDeviceConfig(deviceId);
+  const config = await getDeviceConfig(deviceId);
 
   return NextResponse.json({
     success: true,
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     const deviceId = typeof body.deviceId === "string" ? body.deviceId : defaultDeviceId;
     const settings = isObject(body.settings) ? normalizeSettings(body.settings) : {};
-    const config = updateDeviceConfig(deviceId, { settings });
+    const config = await updateDeviceConfig(deviceId, { settings });
 
     return NextResponse.json({
       success: true,

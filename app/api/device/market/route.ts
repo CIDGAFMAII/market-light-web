@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const forcedDemoMode = searchParams.get("demoMode");
   const symbols = searchParams.get("symbols");
   const deviceId = searchParams.get("deviceId");
-  const deviceConfig = deviceId ? getDeviceConfig(deviceId) : null;
+  const deviceConfig = deviceId ? await getDeviceConfig(deviceId) : null;
   const demoMode =
     forcedDemoMode === "true"
       ? true
