@@ -99,7 +99,28 @@ After deployment, the same page automatically uses the Vercel origin:
 https://<vercel-domain>/api/device/market?symbols=TWSE:0050,TWSE:2330,OKX:BTC-USDT
 ```
 
-The ESP32 should read the complete Vercel API URL during a real deployed demo. No database is used in this phase, so the selected sync list is sent through the `symbols` query string instead of being stored in a server-side table.
+The ESP32 should read the complete Vercel API URL during a real deployed demo. No database is used in this phase; the `symbols` query string is for manual testing, while the `deviceId` flow uses a temporary in-memory device config store.
+
+For the competition device flow, `/watchlist` can also save the current sync list to a server-side device config. The ESP32 can then keep using stable URLs and does not need firmware changes when the web watchlist changes:
+
+```text
+GET /api/device/config?deviceId=ML-ESP32-DEMO
+GET /api/device/market?deviceId=ML-ESP32-DEMO
+```
+
+After the user changes `enabled` / `syncToDevice` and clicks `Save to ESP32 Device`, the page posts the generated `syncSymbols` list to:
+
+```text
+POST /api/device/sync-symbols
+```
+
+The next ESP32 refresh of `/api/device/market?deviceId=ML-ESP32-DEMO` reads the latest saved symbols from the device config. The older `symbols` query mode is still supported for manual testing and demos:
+
+```text
+/api/device/market?symbols=TWSE:0050,TWSE:2330,OKX:BTC-USDT
+```
+
+Current device config storage is an in-memory local/dev fallback only. On Vercel production, durable device settings should be moved to Vercel KV or Upstash Redis because server memory can reset across cold starts and deployments.
 
 ## Companion Mode
 
@@ -174,10 +195,22 @@ Device Market with explicit symbols:
 http://localhost:3000/api/device/market?symbols=TWSE:2330,TWSE:2317,OKX:BTC-USDT
 ```
 
+Device Market by device ID:
+
+```text
+http://localhost:3000/api/device/market?deviceId=ML-ESP32-DEMO
+```
+
 Device Config:
 
 ```text
-http://localhost:3000/api/device/config
+http://localhost:3000/api/device/config?deviceId=ML-ESP32-DEMO
+```
+
+Device Sync Symbols:
+
+```text
+POST http://localhost:3000/api/device/sync-symbols
 ```
 
 Device Heartbeat:
@@ -204,6 +237,8 @@ Current persistence is intentionally lightweight:
 
 - Watchlist settings, market page settings, and companion mode are stored in browser `localStorage`.
 - `localStorage` is per browser and per device. It is not shared across users, browsers, or machines.
+- Device config and saved sync symbols currently use an in-memory server Map as a local/dev fallback.
+- In-memory device config is not durable on Vercel production. Use Vercel KV or Upstash Redis before relying on it for persistent deployed device settings.
 - Market fallback cache is in memory only.
 - In-memory cache is lost when the Next.js server restarts or redeploys.
 - There is still no Prisma / SQLite persistence in this phase.

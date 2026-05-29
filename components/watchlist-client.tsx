@@ -24,6 +24,7 @@ type WatchItem = {
 };
 
 const storageKey = "market-light-watchlist-v1";
+const defaultDeviceId = "ML-ESP32-DEMO";
 
 const defaultItems: WatchItem[] = [
   createItem("TWSE", "2330", "TSMC", "tse"),
@@ -46,6 +47,8 @@ export function WatchlistClient() {
   const [loadingId, setLoadingId] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [deviceId, setDeviceId] = useState(defaultDeviceId);
+  const [savingDevice, setSavingDevice] = useState(false);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(storageKey);
@@ -75,6 +78,12 @@ export function WatchlistClient() {
   );
   const deviceSymbols = deviceSymbolList.join(",");
   const deviceQueryUrl = deviceSymbols && origin ? `${origin}/api/device/market?symbols=${deviceSymbols}` : "";
+  const fixedDeviceMarketUrl = origin && deviceId.trim()
+    ? `${origin}/api/device/market?deviceId=${encodeURIComponent(deviceId.trim())}`
+    : "";
+  const fixedDeviceConfigUrl = origin && deviceId.trim()
+    ? `${origin}/api/device/config?deviceId=${encodeURIComponent(deviceId.trim())}`
+    : "";
 
   function addItem() {
     const cleanSymbol = symbol.trim().toUpperCase();
@@ -171,6 +180,43 @@ export function WatchlistClient() {
     await navigator.clipboard.writeText(deviceQueryUrl);
     setCopiedUrl(true);
     window.setTimeout(() => setCopiedUrl(false), 1400);
+  }
+
+  async function saveToDevice() {
+    const cleanDeviceId = deviceId.trim();
+    if (!cleanDeviceId) {
+      setNotice({ tone: "error", message: "請先輸入 Device ID。" });
+      return;
+    }
+
+    setSavingDevice(true);
+    try {
+      const response = await fetch("/api/device/sync-symbols", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId: cleanDeviceId,
+          syncSymbols: deviceSymbolList,
+        }),
+      });
+      const json = await response.json();
+
+      if (!json.success) {
+        throw new Error(json.message || "Save to ESP32 Device failed");
+      }
+
+      setNotice({
+        tone: "success",
+        message: json.warning ? `已儲存到 ESP32 設定：${json.warning}` : "已儲存到 ESP32 設定。",
+      });
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Save to ESP32 Device failed",
+      });
+    } finally {
+      setSavingDevice(false);
+    }
   }
 
   return (
@@ -300,7 +346,7 @@ export function WatchlistClient() {
                 )}
               </div>
               <div className="rounded border border-cyan/10 bg-black/30 p-4">
-                <div className="mb-3 text-sm uppercase tracking-[0.18em] text-muted">Device API URL</div>
+                <div className="mb-3 text-sm uppercase tracking-[0.18em] text-muted">Manual symbols URL</div>
                 <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-sm text-cyan">
                   {deviceQueryUrl || "尚未選擇同步項目"}
                 </div>
@@ -337,6 +383,69 @@ export function WatchlistClient() {
             </div>
             <div className="mt-4 flex justify-end">
               <CopyJsonButton value={{ url: deviceQueryUrl, symbols: deviceSymbolList }} />
+            </div>
+          </TerminalPanel>
+        </section>
+
+        <section className="mt-5">
+          <TerminalPanel title="Save to ESP32 Device" label="DEVICE ID">
+            <div className="grid gap-4 lg:grid-cols-[0.8fr_1.4fr]">
+              <div className="rounded border border-cyan/10 bg-black/30 p-4">
+                <label className="grid gap-2 text-sm text-muted">
+                  Device ID
+                  <input
+                    className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan"
+                    value={deviceId}
+                    onChange={(event) => setDeviceId(event.target.value)}
+                    placeholder={defaultDeviceId}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={saveToDevice}
+                  disabled={savingDevice}
+                  className="mt-4 w-full rounded border border-[var(--border-yellow)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-yellow transition hover:bg-yellow/10 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {savingDevice ? "Saving" : "Save to ESP32 Device"}
+                </button>
+                <div className="mt-3 rounded border border-white/10 bg-black/25 p-3 text-xs leading-5 text-muted">
+                  這會把目前 enabled=true 且 syncToDevice=true 的清單儲存到 server-side device config。
+                </div>
+              </div>
+              <div className="rounded border border-cyan/10 bg-black/30 p-4">
+                <div className="mb-3 text-sm uppercase tracking-[0.18em] text-muted">ESP32 fixed API URL</div>
+                <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-sm text-cyan">
+                  {fixedDeviceMarketUrl || "請輸入 Device ID"}
+                </div>
+                <div className="mt-3 rounded border border-white/10 bg-black/25 p-3 text-xs leading-5 text-muted">
+                  這條 URL 固定不變，資產清單會從 server-side device config 讀取。
+                </div>
+                <div className="mt-3 break-all rounded border border-white/10 bg-black/25 p-3 text-xs text-muted">
+                  Config URL：{fixedDeviceConfigUrl || "請輸入 Device ID"}
+                </div>
+                <div className="mt-4 flex flex-wrap justify-end gap-3">
+                  {fixedDeviceMarketUrl ? (
+                    <a
+                      href={fixedDeviceMarketUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded border border-[var(--border-pink)] px-3 py-2 text-sm uppercase tracking-[0.16em] text-pink transition hover:bg-pink/10"
+                    >
+                      Open Fixed Device API
+                    </a>
+                  ) : null}
+                  {fixedDeviceConfigUrl ? (
+                    <a
+                      href={fixedDeviceConfigUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded border border-[var(--border-cyan)] px-3 py-2 text-sm uppercase tracking-[0.16em] text-cyan transition hover:bg-cyan/10"
+                    >
+                      Open Config API
+                    </a>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </TerminalPanel>
         </section>

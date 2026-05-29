@@ -1,0 +1,49 @@
+import { NextResponse } from "next/server";
+import { defaultDeviceId, updateDeviceSyncSymbols } from "@/lib/device/device-config-store";
+import { normalizeSyncSymbols } from "@/lib/market/symbols";
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as unknown;
+    if (!isObject(body)) {
+      return NextResponse.json({ success: false, message: "JSON body is required" }, { status: 200 });
+    }
+
+    const deviceId = typeof body.deviceId === "string" ? body.deviceId : defaultDeviceId;
+    const { syncSymbols, invalidSymbols } = normalizeSyncSymbols(body.syncSymbols);
+
+    if (invalidSymbols.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "syncSymbols only accepts TWSE:number or OKX:XXX-YYY",
+          invalidSymbols,
+        },
+        { status: 200 },
+      );
+    }
+
+    const config = updateDeviceSyncSymbols(deviceId, syncSymbols);
+
+    return NextResponse.json({
+      success: true,
+      deviceId: config.deviceId,
+      updatedAt: config.updatedAt,
+      settings: config.settings,
+      syncSymbols: config.syncSymbols,
+      warning: syncSymbols.length === 0 ? "syncSymbols is empty; ESP32 market response will contain no configured items." : undefined,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Device sync symbols update failed",
+      },
+      { status: 200 },
+    );
+  }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}

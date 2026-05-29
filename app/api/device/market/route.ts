@@ -1,27 +1,37 @@
 import { NextResponse } from "next/server";
+import { getDeviceConfig } from "@/lib/device/device-config-store";
 import { mockDeviceSettings, mockDeviceStocks } from "@/lib/market/default-list";
 import { getMarketCollection } from "@/lib/market/service";
-import { parseSymbolsParam } from "@/lib/market/symbols";
+import { parseSymbolsParam, parseSymbolTokens } from "@/lib/market/symbols";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forcedDemoMode = searchParams.get("demoMode");
   const symbols = searchParams.get("symbols");
+  const deviceId = searchParams.get("deviceId");
+  const deviceConfig = deviceId ? getDeviceConfig(deviceId) : null;
   const demoMode =
     forcedDemoMode === "true"
       ? true
       : forcedDemoMode === "false"
         ? false
-        : mockDeviceSettings.demoMode;
+        : deviceConfig?.settings.demoMode ?? mockDeviceSettings.demoMode;
+  const targets = symbols
+    ? parseSymbolsParam(symbols)
+    : deviceConfig
+      ? parseSymbolTokens(deviceConfig.syncSymbols)
+      : mockDeviceStocks;
 
   try {
     const result = await getMarketCollection({
-      targets: (symbols ? parseSymbolsParam(symbols) : mockDeviceStocks).filter((stock) => stock.enabled !== false),
+      targets: targets.filter((stock) => stock.enabled !== false),
       demoMode,
     });
 
     return NextResponse.json({
       ...result,
+      deviceId: deviceConfig?.deviceId,
+      syncSymbols: deviceConfig?.syncSymbols,
       items: result.items.map((item) => ({
         symbol: item.symbol,
         market: item.market,

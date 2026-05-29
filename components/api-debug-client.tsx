@@ -96,7 +96,37 @@ export function ApiDebugClient() {
 
       <TestPanel title="Public Market 測試" buttonLabel="Fetch Market API" endpoint="/api/public/market" previewEnabled />
       <TestPanel title="Device Market 測試" buttonLabel="Fetch Device Market" endpoint="/api/device/market" previewEnabled />
-      <TestPanel title="Device Config 測試" buttonLabel="Fetch Device Config" endpoint="/api/device/config" />
+      <TestPanel title="Device Config 測試" buttonLabel="Fetch Device Config" endpoint="/api/device/config?deviceId=ML-ESP32-DEMO" />
+      <TestPanel
+        title="Device Config 更新測試"
+        buttonLabel="POST Device Config"
+        endpoint="/api/device/config"
+        method="POST"
+        body={{
+          deviceId: "ML-ESP32-DEMO",
+          settings: {
+            demoMode: false,
+            quietMode: false,
+            companionMode: "flirt",
+            refreshIntervalSec: 30,
+            brightness: 80,
+            buzzerEnabled: false,
+          },
+        }}
+      />
+      <TestPanel
+        title="Device Sync Symbols 測試"
+        buttonLabel="POST Sync Symbols"
+        endpoint="/api/device/sync-symbols"
+        method="POST"
+        body={{ deviceId: "ML-ESP32-DEMO", syncSymbols: ["TWSE:0050", "TWSE:2330", "OKX:BTC-USDT"] }}
+      />
+      <TestPanel
+        title="Device Market by Device ID 測試"
+        buttonLabel="Fetch Device ID Market"
+        endpoint="/api/device/market?deviceId=ML-ESP32-DEMO"
+        previewEnabled
+      />
       <TestPanel
         title="Device Heartbeat 測試"
         buttonLabel="POST Heartbeat"
