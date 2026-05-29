@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserSwitcher } from "./user-switcher";
 
 const items = [
   { label: "總覽", href: "/dashboard" },
@@ -12,21 +13,26 @@ const items = [
 
 export function Sidebar() {
   return (
-    <aside className="border-r border-slate-700/60 bg-slate-950/75 p-4">
-      <Link href="/" className="brand-mark block">
-        Market Light
-      </Link>
-      <nav className="mt-8 space-y-2">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="block rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-slate-700 hover:bg-slate-900/80 hover:text-slate-50"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+    <aside className="flex flex-col justify-between border-r border-slate-700/60 bg-slate-950/75 p-4 min-h-[calc(100vh-2rem)] lg:min-h-0">
+      <div>
+        <Link href="/" className="brand-mark block">
+          Market Light
+        </Link>
+        <nav className="mt-8 space-y-2">
+          {items.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="block rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-slate-700 hover:bg-slate-900/80 hover:text-slate-50"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+      <div className="mt-8 lg:mt-auto pt-6 border-t border-slate-800/80">
+        <UserSwitcher />
+      </div>
     </aside>
   );
 }
