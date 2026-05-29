@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { isDetailChartRange, type DetailChartRange } from "@/lib/market/providers/okx-candles";
 import { StatusBadge } from "./status-badge";
 import { TerminalPanel } from "./terminal-panel";
 
@@ -28,7 +29,9 @@ type Notice = {
 };
 
 const storageKey = "market-light-watchlist-v1";
+const detailChartRangeStorageKey = "market-light-detail-chart-range-v1";
 const defaultDeviceId = "ML-ESP32-DEMO";
+const detailChartRanges: DetailChartRange[] = ["5m", "15m", "1h", "24h"];
 
 const defaultItems: WatchItem[] = [
   createItem("OKX", "ETH-USDT", "ETH", "tse"),
@@ -43,6 +46,7 @@ export function WatchlistClient() {
   const [symbol, setSymbol] = useState("BTC-USDT");
   const [displayName, setDisplayName] = useState("BTC");
   const [deviceId, setDeviceId] = useState(defaultDeviceId);
+  const [detailChartRange, setDetailChartRange] = useState<DetailChartRange>("15m");
   const [loadingId, setLoadingId] = useState("");
   const [savingDevice, setSavingDevice] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -50,11 +54,15 @@ export function WatchlistClient() {
 
   useEffect(() => {
     const raw = window.localStorage.getItem(storageKey);
+    const savedDetailChartRange = window.localStorage.getItem(detailChartRangeStorageKey);
     setOrigin(window.location.origin);
     try {
       setItems(raw ? JSON.parse(raw) : defaultItems);
     } catch {
       setItems(defaultItems);
+    }
+    if (isDetailChartRange(savedDetailChartRange)) {
+      setDetailChartRange(savedDetailChartRange);
     }
     setLoaded(true);
   }, []);
@@ -62,8 +70,9 @@ export function WatchlistClient() {
   useEffect(() => {
     if (loaded) {
       window.localStorage.setItem(storageKey, JSON.stringify(items));
+      window.localStorage.setItem(detailChartRangeStorageKey, detailChartRange);
     }
-  }, [items, loaded]);
+  }, [detailChartRange, items, loaded]);
 
   const deviceSyncItems = useMemo(
     () => items.filter((item) => item.syncToDevice),
@@ -175,6 +184,9 @@ export function WatchlistClient() {
         body: JSON.stringify({
           deviceId: cleanDeviceId,
           syncSymbols: deviceSymbolList,
+          settings: {
+            detailChartRange,
+          },
         }),
       });
       const json = await response.json();
@@ -291,24 +303,47 @@ export function WatchlistClient() {
 
         <section className="mt-5">
           <TerminalPanel title="ESP32 顯示清單" label={`${deviceSyncItems.length} ASSETS`}>
-            <div className="soft-card p-4">
-              <div className="mb-3 text-sm text-slate-400">
-                目前會顯示 {deviceSyncItems.length} 個資產：
-              </div>
-              {deviceSyncItems.length > 0 ? (
-                <ul className="space-y-2 font-mono text-sm text-indigo-200">
-                  {deviceSyncItems.map((item) => (
-                    <li key={item.id} className="rounded-lg border border-slate-700/70 bg-slate-950/80 px-3 py-2">
-                      {item.symbol}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="rounded-lg border border-slate-700/70 bg-slate-950/75 p-3 text-sm text-slate-300">
-                  尚未選擇資產
+            <div className="grid gap-4 lg:grid-cols-[1fr_0.95fr]">
+              <div className="soft-card p-4">
+                <div className="mb-3 text-sm text-slate-400">
+                  目前會顯示 {deviceSyncItems.length} 個資產：
                 </div>
-              )}
-              <div className="mt-4 flex justify-end">
+                {deviceSyncItems.length > 0 ? (
+                  <ul className="space-y-2 font-mono text-sm text-indigo-200">
+                    {deviceSyncItems.map((item) => (
+                      <li key={item.id} className="rounded-lg border border-slate-700/70 bg-slate-950/80 px-3 py-2">
+                        {item.symbol}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="rounded-lg border border-slate-700/70 bg-slate-950/75 p-3 text-sm text-slate-300">
+                    尚未選擇資產
+                  </div>
+                )}
+              </div>
+
+              <div className="soft-card p-4">
+                <div className="text-base font-semibold text-slate-50">ESP32 顯示設定</div>
+                <div className="mt-3 text-sm font-medium text-slate-300">詳細模式曲線範圍：</div>
+                <div className="mt-3 segmented-control">
+                  {detailChartRanges.map((range) => (
+                    <button
+                      key={range}
+                      type="button"
+                      onClick={() => setDetailChartRange(range)}
+                      className={`segmented-option ${detailChartRange === range ? "segmented-option-active" : ""}`}
+                    >
+                      {range}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  長按 A 進入詳細模式時，OLED 會顯示此時間範圍的價格曲線。
+                </p>
+              </div>
+
+              <div className="flex justify-end lg:col-span-2">
                 <button
                   type="button"
                   onClick={saveToDevice}

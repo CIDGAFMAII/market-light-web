@@ -225,6 +225,7 @@ Supported actions:
 - Delete items
 - Show or hide items in the market watch page
 - Mark whether items are shown on the ESP32
+- Choose the ESP32 DETAIL chart range: `5m / 15m / 1h / 24h`
 - Reset watchlist to defaults
 - Show the ESP32 sync list generated from `syncToDevice=true`
 - Keep developer API URLs in a collapsed developer details panel
@@ -265,6 +266,12 @@ After the user changes `syncToDevice` and clicks `Save to ESP32 Device`, the pag
 
 ```text
 POST /api/device/sync-symbols
+```
+
+The same save action also stores `settings.detailChartRange`. Future ESP32 firmware can read `/api/device/config?deviceId=...`, use `settings.detailChartRange`, and then request:
+
+```text
+/api/device/chart?symbol=OKX:BTC-USDT&range=<detailChartRange>
 ```
 
 The next ESP32 refresh of `/api/device/market?deviceId=ML-ESP32-DEMO` reads the latest saved symbols from the device config. The older `symbols` query mode is still supported for manual testing and demos:

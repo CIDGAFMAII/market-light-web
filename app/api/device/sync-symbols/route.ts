@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { defaultDeviceId, updateDeviceSyncSymbols } from "@/lib/device/device-config-store";
+import { defaultDeviceId, updateDeviceConfig } from "@/lib/device/device-config-store";
+import { isDetailChartRange } from "@/lib/market/providers/okx-candles";
 import { normalizeSyncSymbols } from "@/lib/market/symbols";
 
 export async function POST(request: Request) {
@@ -23,7 +24,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const config = updateDeviceSyncSymbols(deviceId, syncSymbols);
+    const settings = isObject(body.settings) && typeof body.settings.detailChartRange === "string" && isDetailChartRange(body.settings.detailChartRange)
+      ? { detailChartRange: body.settings.detailChartRange }
+      : undefined;
+    const config = updateDeviceConfig(deviceId, { syncSymbols, settings });
 
     return NextResponse.json({
       success: true,
