@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function POST(request: Request) {
   try {
-    let users = await prisma.user.findMany({
-      select: {
-        id: true,
-        displayName: true,
-        email: true,
-      },
-      orderBy: {
-        email: "asc",
-      },
-    });
+    const body = await request.json();
+    const { account, password } = body;
 
-    if (users.length === 0) {
+    if (!account || !password) {
+      return NextResponse.json(
+        { success: false, message: "請輸入帳號與密碼" },
+        { status: 400 }
+      );
+    }
+
+    const inputClean = account.trim().toLowerCase();
+
+    // 1. Check if database has users. If not, auto-seed.
+    const usersCount = await prisma.user.count();
+    if (usersCount === 0) {
       try {
         const user1 = await prisma.user.create({
           data: {
@@ -117,25 +120,55 @@ export async function GET() {
             { deviceId: device2.id, market: "OKX", symbol: "SOL-USDT", displayName: "SOL", displayOrder: 2 },
           ],
         });
-
-        users = await prisma.user.findMany({
-          select: {
-            id: true,
-            displayName: true,
-            email: true,
-          },
-          orderBy: {
-            email: "asc",
-          },
-        });
       } catch (seedErr) {
-        console.error("Auto seeding on request failed", seedErr);
+        console.error("Auto seeding in login route failed", seedErr);
       }
     }
 
-    return NextResponse.json({ success: true, users });
+    // 2. Fetch all users for matching
+    const allUsers = await prisma.user.findMany();
+
+    const matchedUser = allUsers.find((u) => {
+      const emailClean = u.email.toLowerCase();
+      const nameClean = (u.displayName || "").toLowerCase();
+
+      if (emailClean === inputClean) return true;
+      if (nameClean === inputClean) return true;
+
+      if (inputClean === "user1" && (emailClean.includes("demo") || nameClean.includes("user 1"))) return true;
+      if (inputClean === "user2" && (emailClean.includes("user2") || nameClean.includes("user 2"))) return true;
+
+      return false;
+    });
+
+    if (!matchedUser) {
+      return NextResponse.json(
+        { success: false, message: "帳號不存在！請輸入預設帳戶：User1 或 User2" },
+        { status: 401 }
+      );
+    }
+
+    // Simple password validation for demo
+    if (password !== matchedUser.passwordHash) {
+      return NextResponse.json(
+        { success: false, message: "密碼錯誤！請使用預設密碼 demo1234" },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: matchedUser.id,
+        email: matchedUser.email,
+        displayName: matchedUser.displayName,
+      },
+    });
   } catch (e) {
-    console.error("[GET /api/public/users]", e);
-    return NextResponse.json({ success: false, message: "伺服器錯誤" }, { status: 500 });
+    console.error("[POST /api/public/login]", e);
+    return NextResponse.json(
+      { success: false, message: "伺服器發生錯誤" },
+      { status: 500 }
+    );
   }
 }
