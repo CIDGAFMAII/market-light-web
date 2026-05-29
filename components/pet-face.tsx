@@ -1,9 +1,11 @@
 import { petFaces, statusTone, type MarketStatus } from "@/lib/market-status";
+import { getDirectionRgbColor, type PriceColorMode } from "@/lib/market/color";
 
 type PetFaceProps = {
   status: MarketStatus;
   name?: string;
   size?: "sm" | "md" | "lg";
+  colorMode?: PriceColorMode;
 };
 
 const colorMap = {
@@ -20,8 +22,8 @@ const sizeMap = {
   lg: "text-5xl px-7 py-6",
 };
 
-export function PetFace({ status, name = "PET", size = "md" }: PetFaceProps) {
-  const tone = statusTone(status);
+export function PetFace({ status, name = "PET", size = "md", colorMode }: PetFaceProps) {
+  const tone = colorMode ? getDirectionRgbColor(status, colorMode) : statusTone(status);
 
   return (
     <div className={`rounded-lg border bg-black/45 text-center ${colorMap[tone]} ${sizeMap[size]}`}>

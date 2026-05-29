@@ -8,8 +8,10 @@ import { PetFace } from "@/components/pet-face";
 import { RGBStatus } from "@/components/rgb-status";
 import { StatusBadge } from "@/components/status-badge";
 import { TerminalPanel } from "@/components/terminal-panel";
+import { PriceColorModeToggle, usePriceColorMode } from "@/components/price-color-mode-toggle";
 import { companionMessage, type CompanionMode } from "@/lib/companion";
 import { demoStates } from "@/lib/demo-data";
+import { getDirectionRgbColor } from "@/lib/market/color";
 import type { MarketStatus } from "@/lib/market-status";
 
 const statuses: MarketStatus[] = ["calm", "up", "up_alert", "down", "down_alert", "error", "closed"];
@@ -28,8 +30,10 @@ const statusButtonLabels: Record<MarketStatus, string> = {
 export default function DemoPage() {
   const [status, setStatus] = useState<MarketStatus>("up_alert");
   const [companionMode, setCompanionMode] = useState<CompanionMode>("normal");
+  const { priceColorMode, setPriceColorMode } = usePriceColorMode();
   const data = demoStates[status];
   const deviceId = "ML-ESP32-DEMO";
+  const rgbColor = getDirectionRgbColor(status, priceColorMode);
 
   const json = useMemo(
     () => ({
@@ -44,7 +48,7 @@ export default function DemoPage() {
         line4: data.line4,
       },
       rgb: {
-        color: data.rgb,
+        color: rgbColor,
         pulse: status.includes("alert"),
       },
       pet: {
@@ -65,7 +69,7 @@ export default function DemoPage() {
       },
       updatedAt: "2026-05-29T07:12:08+08:00",
     }),
-    [companionMode, data, status],
+    [companionMode, data, rgbColor, status],
   );
 
   return (
@@ -78,12 +82,15 @@ export default function DemoPage() {
             <p className="mt-3 text-muted">競賽展示用：OLED、RGB、小助手、fallback 與 ESP32 API 資料流集中在這裡。</p>
             <p className="mt-2 text-sm text-yellow">台股畫面為展示資料，重點是呈現 ESP32 同步與提醒流程。</p>
           </div>
-          <StatusBadge status={status} />
+          <div className="flex flex-wrap items-center gap-2">
+            <PriceColorModeToggle mode={priceColorMode} onChange={setPriceColorMode} />
+            <StatusBadge status={status} colorMode={priceColorMode} />
+          </div>
         </div>
 
         <section className="grid gap-5 lg:grid-cols-[1fr_0.85fr_1fr]">
           <TerminalPanel title="OLED 模擬器" label="128x64">
-            <OLEDPreview line1={data.line1} line2={data.line2} line3={data.line3} line4={data.line4} status={status} />
+            <OLEDPreview line1={data.line1} line2={data.line2} line3={data.line3} line4={data.line4} status={status} colorMode={priceColorMode} />
             <div className="mt-4 text-sm leading-7 text-muted">{data.note}</div>
             <div className="mt-3 flex flex-wrap gap-2">
               {(status === "error" || status === "closed") ? (
@@ -98,9 +105,9 @@ export default function DemoPage() {
           </TerminalPanel>
 
           <TerminalPanel title="RGB 輸出" label="GPIO">
-            <RGBStatus status={status} color={data.rgb} />
+            <RGBStatus status={status} color={rgbColor} />
             <div className="mt-5">
-              <PetFace status={status} name="Miko" size="md" />
+              <PetFace status={status} name="Miko" size="md" colorMode={priceColorMode} />
             </div>
             <div className="mt-4 rounded border border-white/10 bg-black/30 p-3 text-sm leading-6 text-white">
               {companionMessage(status, companionMode)}

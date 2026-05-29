@@ -1,8 +1,10 @@
 import { statusLabels, statusTone, type MarketStatus } from "@/lib/market-status";
+import { getDirectionRgbColor, type PriceColorMode } from "@/lib/market/color";
 
 type StatusBadgeProps = {
   status: MarketStatus;
   className?: string;
+  colorMode?: PriceColorMode;
 };
 
 const classes = {
@@ -13,8 +15,8 @@ const classes = {
   cyan: "border-cyan/45 bg-cyan/10 text-cyan",
 };
 
-export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
-  const tone = statusTone(status);
+export function StatusBadge({ status, className = "", colorMode }: StatusBadgeProps) {
+  const tone = colorMode ? getDirectionRgbColor(status, colorMode) : statusTone(status);
 
   return (
     <span

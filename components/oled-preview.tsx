@@ -1,5 +1,6 @@
 import type { MarketStatus } from "@/lib/market-status";
 import { statusTone } from "@/lib/market-status";
+import { getDirectionRgbColor, type PriceColorMode } from "@/lib/market/color";
 
 export type OLEDPreviewProps = {
   line1: string;
@@ -7,6 +8,7 @@ export type OLEDPreviewProps = {
   line3: string;
   line4: string;
   status?: MarketStatus;
+  colorMode?: PriceColorMode;
 };
 
 const toneClass = {
@@ -17,8 +19,8 @@ const toneClass = {
   cyan: "text-cyan shadow-cyan",
 };
 
-export function OLEDPreview({ line1, line2, line3, line4, status = "calm" }: OLEDPreviewProps) {
-  const tone = statusTone(status);
+export function OLEDPreview({ line1, line2, line3, line4, status = "calm", colorMode }: OLEDPreviewProps) {
+  const tone = colorMode ? getDirectionRgbColor(status, colorMode) : statusTone(status);
   const lines = [line1, line2, line3, line4];
 
   return (

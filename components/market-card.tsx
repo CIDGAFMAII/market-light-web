@@ -1,14 +1,18 @@
 import type { MarketItem } from "@/lib/demo-data";
+import {
+  defaultPriceColorMode,
+  getDirectionTextClass,
+  type PriceColorMode,
+} from "@/lib/market/color";
 import { StatusBadge } from "./status-badge";
 
 type MarketCardProps = {
   item: MarketItem;
+  colorMode?: PriceColorMode;
 };
 
-export function MarketCard({ item }: MarketCardProps) {
-  const isUp = item.changePercent > 0;
-  const isDown = item.changePercent < 0;
-  const priceColor = isUp ? "text-red-300" : isDown ? "text-green-300" : "text-cyan";
+export function MarketCard({ item, colorMode = defaultPriceColorMode }: MarketCardProps) {
+  const priceColor = getDirectionTextClass(item.changePercent, colorMode);
   const sign = item.changePercent > 0 ? "+" : "";
 
   return (
@@ -31,7 +35,7 @@ export function MarketCard({ item }: MarketCardProps) {
       <div className="text-cyan">{item.mood}</div>
       <div className="flex items-center gap-2 md:justify-end">
         <span className="rounded border border-white/10 px-2 py-1 text-xs text-muted">{item.source}</span>
-        <StatusBadge status={item.status} />
+        <StatusBadge status={item.status} colorMode={colorMode} />
       </div>
     </div>
   );

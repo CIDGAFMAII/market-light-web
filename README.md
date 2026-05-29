@@ -74,6 +74,13 @@ demo provider only
 - Loading and error states
 - Compact fallback notice with expandable provider warnings
 
+Price color preference is stored in browser `localStorage` with `market-light-price-color-mode-v1`:
+
+- International mode: green means up, red means down.
+- Taiwan mode: red means up, green means down.
+
+The default is International mode because the competition demo flow uses OKX crypto as the main real data source. `/market`, `/market/[market]/[symbol]`, and `/demo` share this setting.
+
 ## Demo Page
 
 `/demo` is the competition showcase page for judges and live demos. It contains the visual and narrative device experience:

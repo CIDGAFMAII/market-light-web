@@ -116,7 +116,7 @@ export const demoStates: Record<
     line3: "(^_^) 成交 13:30",
     line4: "更新 14s",
     rgb: "red",
-    note: "台股顏色習慣：紅色代表上漲。",
+    note: "上漲顏色會依使用者偏好切換。",
   },
   up_alert: {
     label: "up_alert",
@@ -134,7 +134,7 @@ export const demoStates: Record<
     line3: "(._.) 成交 24H",
     line4: "更新 6s",
     rgb: "green",
-    note: "台股顏色習慣：綠色代表下跌。",
+    note: "下跌顏色會依使用者偏好切換。",
   },
   down_alert: {
     label: "down_alert",

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { statusLabels } from "@/lib/market-status";
 import { StatusBadge } from "@/components/status-badge";
 import { TerminalPanel } from "@/components/terminal-panel";
+import { PriceColorModeToggle, usePriceColorMode } from "@/components/price-color-mode-toggle";
+import { getDirectionTextClass, type PriceColorMode } from "@/lib/market/color";
 import type { MarketStatus } from "@/lib/market-status";
 import type { MarketData, MarketSource } from "@/lib/market/types";
 
@@ -58,6 +60,7 @@ export function MarketBoardClient() {
   const [sortDesc, setSortDesc] = useState(true);
   const [marketFilter, setMarketFilter] = useState<MarketFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const { priceColorMode, setPriceColorMode } = usePriceColorMode();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -161,6 +164,7 @@ export function MarketBoardClient() {
             <p className="mt-3 text-muted">OKX 加密貨幣為真實資料；台股目前以 Demo 資料展示 ESP32 同步與提醒流程。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <PriceColorModeToggle mode={priceColorMode} onChange={setPriceColorMode} />
             <button
               type="button"
               onClick={() => updateSourceMode(sourceModeSetting === "demo" ? "real" : "demo")}
@@ -262,7 +266,7 @@ export function MarketBoardClient() {
               <span className="text-right">狀態</span>
             </div>
             {filteredItems.map((item) => (
-              <MarketRow key={`${item.market}:${item.symbol}`} item={item} />
+              <MarketRow key={`${item.market}:${item.symbol}`} item={item} priceColorMode={priceColorMode} />
             ))}
           </TerminalPanel>
         </section>
@@ -271,10 +275,8 @@ export function MarketBoardClient() {
   );
 }
 
-function MarketRow({ item }: { item: MarketData }) {
-  const isUp = item.changePercent > 0;
-  const isDown = item.changePercent < 0;
-  const priceColor = isUp ? "text-red-300" : isDown ? "text-green-300" : "text-cyan";
+function MarketRow({ item, priceColorMode }: { item: MarketData; priceColorMode: PriceColorMode }) {
+  const priceColor = getDirectionTextClass(item.changePercent, priceColorMode);
   const sign = item.changePercent > 0 ? "+" : "";
 
   return (
@@ -308,7 +310,7 @@ function MarketRow({ item }: { item: MarketData }) {
         {item.stale ? <span className="rounded border border-yellow-400/40 px-2 py-1 text-xs text-yellow">STALE</span> : null}
       </div>
       <div className="flex md:justify-end">
-        <StatusBadge status={item.status} />
+        <StatusBadge status={item.status} colorMode={priceColorMode} />
       </div>
     </Link>
   );

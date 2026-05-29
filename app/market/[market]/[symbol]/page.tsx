@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { ColorAwareOLEDPreview, ColorAwareStatusBadge } from "@/components/color-aware-market-preview";
 import { CopyJsonButton } from "@/components/copy-json-button";
-import { OLEDPreview } from "@/components/oled-preview";
-import { StatusBadge } from "@/components/status-badge";
+import { MarketDetailPricePanel } from "@/components/market-detail-price-panel";
 import { TerminalPanel } from "@/components/terminal-panel";
 import { getMarketCollection } from "@/lib/market/service";
 import type { MarketName, MarketTarget } from "@/lib/market/types";
@@ -65,7 +65,7 @@ export default async function MarketDetailPage({ params }: PageProps) {
             <span className="rounded border border-cyan/30 px-3 py-2 text-cyan">{item.source}</span>
             {item.quoteQuality ? <span className="rounded border border-white/15 px-3 py-2 text-muted">{item.quoteQuality.toUpperCase()}</span> : null}
             {item.stale ? <span className="rounded border border-yellow-400/40 px-3 py-2 text-yellow">STALE</span> : null}
-            <StatusBadge status={item.status} />
+            <ColorAwareStatusBadge status={item.status} />
           </div>
         </div>
 
@@ -78,11 +78,9 @@ export default async function MarketDetailPage({ params }: PageProps) {
         <section className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
           <TerminalPanel title="完整行情" label={result.sourceMode}>
             <div className="grid gap-3 sm:grid-cols-2">
+              <MarketDetailPricePanel price={item.price} change={item.change} changePercent={item.changePercent} />
               <DataLine label="symbol" value={item.symbol} />
               <DataLine label="displayName" value={item.displayName} />
-              <DataLine label="price" value={item.price.toLocaleString()} />
-              <DataLine label="change" value={`${sign}${item.change.toFixed(2)}`} />
-              <DataLine label="changePercent" value={`${sign}${item.changePercent.toFixed(2)}%`} />
               <DataLine label="high" value={item.high.toLocaleString()} />
               <DataLine label="low" value={item.low.toLocaleString()} />
               <DataLine label="volume" value={item.volume.toLocaleString()} />
@@ -96,7 +94,7 @@ export default async function MarketDetailPage({ params }: PageProps) {
           </TerminalPanel>
 
           <TerminalPanel title="OLED Preview" label="ESP32">
-            <OLEDPreview line1={oledLine1} line2={oledLine2} line3={oledLine3} line4={oledLine4} status={item.status} />
+            <ColorAwareOLEDPreview line1={oledLine1} line2={oledLine2} line3={oledLine3} line4={oledLine4} status={item.status} />
           </TerminalPanel>
         </section>
 
