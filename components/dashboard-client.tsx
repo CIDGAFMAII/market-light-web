@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { fetchWithAuth } from "@/lib/client-auth";
 import { SettingRow } from "./setting-row";
 import { StatusBadge } from "./status-badge";
 import { TerminalPanel } from "./terminal-panel";
@@ -27,12 +28,7 @@ export function DashboardClient() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
-        const res = await fetch("/api/web/dashboard", {
-          headers: {
-            "x-user-id": userId,
-          },
-        });
+        const res = await fetchWithAuth("/api/web/dashboard", { cache: "no-store" });
         const data = await res.json();
         if (data.success) {
           setStats(data);

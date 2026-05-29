@@ -1,76 +1,101 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getActiveUserId, setActiveUserId } from "@/lib/client-auth";
+import { LoginModal } from "./login-modal";
 
 type UserProfile = {
   id: string;
-  displayName: string;
+  displayName: string | null;
   email: string;
 };
 
 export function UserSwitcher() {
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [activeUserId, setActiveUserId] = useState<string>("");
+  const [activeUserId, setActiveUserIdState] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const res = await fetch("/api/public/users");
+        const res = await fetch("/api/public/users", { cache: "no-store" });
         const data = await res.json();
         if (data.success && Array.isArray(data.users) && data.users.length > 0) {
           setUsers(data.users);
-          
-          const storedUserId = window.localStorage.getItem("ml_auth_user_id");
-          const exists = data.users.some((u: UserProfile) => u.id === storedUserId);
-          
-          if (storedUserId && exists) {
-            setActiveUserId(storedUserId);
-          } else {
-            const defaultId = data.users[0].id;
-            window.localStorage.setItem("ml_auth_user_id", defaultId);
-            setActiveUserId(defaultId);
-          }
+
+          const storedUserId = getActiveUserId();
+          const exists = data.users.some((user: UserProfile) => user.id === storedUserId);
+          const nextUserId = exists ? storedUserId : data.users[0].id;
+
+          setActiveUserId(nextUserId);
+          setActiveUserIdState(nextUserId);
         }
-      } catch (e) {
-        console.error("Failed to load users for switcher", e);
+      } catch (error) {
+        console.error("Failed to load users for switcher", error);
       } finally {
         setLoading(false);
       }
     }
+
     fetchUsers();
   }, []);
 
   function handleUserChange(newUserId: string) {
-    window.localStorage.setItem("ml_auth_user_id", newUserId);
     setActiveUserId(newUserId);
+    setActiveUserIdState(newUserId);
     window.location.reload();
   }
 
-  if (loading || users.length === 0) {
-    return (
-      <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 text-center text-xs text-slate-500">
-        正在載入帳號...
-      </div>
-    );
+  function handleLoginSuccess(userId: string) {
+    setActiveUserId(userId);
+    setActiveUserIdState(userId);
+    setLoginOpen(false);
+    window.location.reload();
   }
+
+  const activeUser = users.find((user) => user.id === activeUserId);
 
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-3">
-      <label className="block text-xs font-semibold text-slate-400 mb-1">
-        切換展示帳號
-      </label>
-      <select
-        value={activeUserId}
-        onChange={(e) => handleUserChange(e.target.value)}
-        className="w-full bg-slate-900 border border-slate-700/60 rounded px-2 py-1 text-xs text-indigo-300 font-medium focus:outline-none focus:border-indigo-500 cursor-pointer"
-      >
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.displayName || u.email}
-          </option>
-        ))}
-      </select>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold text-slate-400">目前帳號</div>
+          <div className="mt-1 truncate text-sm font-semibold text-indigo-200">
+            {loading ? "載入中..." : activeUser?.displayName || activeUser?.email || "未登入"}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setLoginOpen(true)}
+          className="rounded-lg border border-indigo-400/35 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-100 transition hover:border-indigo-300 hover:bg-indigo-500/20"
+        >
+          帳號登入
+        </button>
+      </div>
+
+      {users.length > 0 ? (
+        <label className="block text-xs font-semibold text-slate-400">
+          Demo 使用者
+          <select
+            value={activeUserId}
+            onChange={(event) => handleUserChange(event.target.value)}
+            className="mt-1 w-full cursor-pointer rounded border border-slate-700/60 bg-slate-900 px-2 py-1 text-xs font-medium text-indigo-300 focus:border-indigo-500 focus:outline-none"
+          >
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.displayName || user.email}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }

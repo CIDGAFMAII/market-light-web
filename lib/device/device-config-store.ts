@@ -102,7 +102,7 @@ export async function getDeviceConfig(deviceId: string): Promise<DeviceConfig> {
     buzzerEnabled: device.settings?.buzzerEnabled ?? defaultSettings.buzzerEnabled,
   };
 
-  const syncSymbols = device.stocks.map((s) => `${s.market}:${s.symbol}`);
+  const syncSymbols = device.stocks.map((stock) => `${stock.market}:${stock.symbol}`);
 
   return {
     deviceId: device.deviceCode,

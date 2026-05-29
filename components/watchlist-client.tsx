@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { fetchWithAuth } from "@/lib/client-auth";
 import { isDetailChartRange, type DetailChartRange } from "@/lib/market/providers/okx-candles";
 import { StatusBadge } from "./status-badge";
 import { TerminalPanel } from "./terminal-panel";
@@ -52,15 +53,12 @@ export function WatchlistClient() {
 
   useEffect(() => {
     async function loadWatchlistAndSettings() {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
       setOrigin(window.location.origin);
       
       try {
-        const res = await fetch("/api/web/watchlist", {
+        const res = await fetchWithAuth("/api/web/watchlist", {
           method: "GET",
-          headers: {
-            "x-user-id": userId,
-          },
+          cache: "no-store",
         });
         const data = await res.json();
         if (data.success && Array.isArray(data.items)) {
@@ -90,11 +88,7 @@ export function WatchlistClient() {
       }
       
       try {
-        const res = await fetch("/api/web/settings", {
-          headers: {
-            "x-user-id": userId,
-          },
-        });
+        const res = await fetchWithAuth("/api/web/settings", { cache: "no-store" });
         const data = await res.json();
         if (data.success && data.settings && isDetailChartRange(data.settings.detailChartRange)) {
           setDetailChartRange(data.settings.detailChartRange);
@@ -199,13 +193,11 @@ export function WatchlistClient() {
         }
       }
 
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
       const dbSymbol = market === "OKX" ? cleanSymbol.replace("-", "/") : cleanSymbol;
 
-      const res = await fetch("/api/web/watchlist", {
+      const res = await fetchWithAuth("/api/web/watchlist", {
         method: "POST",
         headers: {
-          "x-user-id": userId,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -251,11 +243,9 @@ export function WatchlistClient() {
     else if (!nextSyncToDevice && currentEnabled) displayMode = 1;
 
     try {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
-      const res = await fetch(`/api/web/watchlist/${id}`, {
+      const res = await fetchWithAuth(`/api/web/watchlist/${id}`, {
         method: "PUT",
         headers: {
-          "x-user-id": userId,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ displayMode }),
@@ -279,11 +269,9 @@ export function WatchlistClient() {
     else if (!currentSyncToDevice && nextEnabled) displayMode = 1;
 
     try {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
-      const res = await fetch(`/api/web/watchlist/${id}`, {
+      const res = await fetchWithAuth(`/api/web/watchlist/${id}`, {
         method: "PUT",
         headers: {
-          "x-user-id": userId,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ displayMode }),
@@ -301,12 +289,8 @@ export function WatchlistClient() {
 
   async function deleteWatchlistItem(id: string) {
     try {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
-      const res = await fetch(`/api/web/watchlist/${id}`, {
+      const res = await fetchWithAuth(`/api/web/watchlist/${id}`, {
         method: "DELETE",
-        headers: {
-          "x-user-id": userId,
-        },
       });
       const data = await res.json();
       if (data.success) {
@@ -323,12 +307,9 @@ export function WatchlistClient() {
   async function resetItems() {
     setNotice({ tone: "success", message: "重置中..." });
     try {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
-
       for (const item of items) {
-        await fetch(`/api/web/watchlist/${item.id}`, {
+        await fetchWithAuth(`/api/web/watchlist/${item.id}`, {
           method: "DELETE",
-          headers: { "x-user-id": userId },
         });
       }
 
@@ -339,10 +320,9 @@ export function WatchlistClient() {
       ];
 
       for (const d of defaults) {
-        const res = await fetch("/api/web/watchlist", {
+        const res = await fetchWithAuth("/api/web/watchlist", {
           method: "POST",
           headers: {
-            "x-user-id": userId,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -374,12 +354,10 @@ export function WatchlistClient() {
   }
 
   async function updateDetailChartRange(range: DetailChartRange) {
-    const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
     try {
-      const res = await fetch("/api/web/settings", {
+      const res = await fetchWithAuth("/api/web/settings", {
         method: "PUT",
         headers: {
-          "x-user-id": userId,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ detailChartRange: range }),
