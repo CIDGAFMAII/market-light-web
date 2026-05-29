@@ -51,19 +51,19 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     }
 
     const inputClean = accountInput.trim().toLowerCase();
-    
+
     // Resolve input to seeded users
     const matchedUser = users.find((u) => {
       const emailClean = u.email.toLowerCase();
       const nameClean = u.displayName.toLowerCase();
-      
+
       if (emailClean === inputClean) return true;
       if (nameClean === inputClean) return true;
-      
+
       // Support User1 / User2 aliases
       if (inputClean === "user1" && (emailClean.includes("demo@") || nameClean.includes("user 1"))) return true;
       if (inputClean === "user2" && (emailClean.includes("user2") || nameClean.includes("user 2"))) return true;
-      
+
       return false;
     });
 
@@ -98,7 +98,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <label className="block text-sm font-semibold text-slate-300">
-              使用者帳號
+              使用者帳號 【預設 User1、User2】
               <input
                 type="text"
                 placeholder="請輸入 User1 或 User2"
