@@ -41,7 +41,7 @@ async function main() {
     where: { deviceCode: "ML-8F3A2C" },
     update: {},
     create: {
-      deviceCode: "ML-8F3A2C",
+      deviceCode: "ML-ESP32-DEMO",
       deviceName: "Market Light Desk 1",
       isBound: true,
       userId: user1.id,
