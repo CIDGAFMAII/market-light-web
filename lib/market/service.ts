@@ -1,7 +1,8 @@
 import { getMarketStatus, type MarketStatus } from "../market-status";
 import { findMarketCache, upsertMarketCache } from "./cache";
-import { getDemoMarketItem, getDemoMarketItems } from "./demo-provider";
+import { getDemoMarketItem } from "./demo-provider";
 import { fetchOkxTicker } from "./providers/okx-ticker";
+import { createOkxErrorMarketData, getOkxSymbolValidation } from "./validation";
 import type { MarketData, MarketTarget } from "./types";
 
 export type MarketCollectionResult = {
@@ -23,14 +24,29 @@ export async function getMarketCollection({
   const enabledTargets = targets.filter((target) => target.enabled !== false);
 
   if (demoMode) {
-    const items = getDemoMarketItems(enabledTargets);
+    const warnings: string[] = [];
+    const items = await Promise.all(enabledTargets.map(async (target) => {
+      if (target.market === "TWSE") return getDemoMarketItem(target);
+
+      const validation = await getOkxSymbolValidation(target.symbol);
+      if (!validation.valid) {
+        warnings.push(`OKX ${target.symbol} invalid; skipped demo fallback`);
+        return createOkxErrorMarketData({
+          symbol: target.symbol,
+          displayName: target.displayName,
+          message: validation.message,
+        });
+      }
+
+      return getDemoMarketItem(target);
+    }));
     return {
       success: true,
       updatedAt: new Date().toISOString(),
       marketMood: computeMarketMood(items),
-      sourceMode: "DEMO",
+      sourceMode: warnings.length > 0 ? "REAL_WITH_FALLBACK" : "DEMO",
       items,
-      warnings: [],
+      warnings,
     };
   }
 
@@ -46,6 +62,16 @@ export async function getMarketCollection({
           stale: true,
           message: "Taiwan stock demo data for competition flow",
         };
+      }
+
+      const validation = await getOkxSymbolValidation(target.symbol);
+      if (!validation.valid) {
+        warnings.push(`OKX ${target.symbol} invalid`);
+        return createOkxErrorMarketData({
+          symbol: target.symbol,
+          displayName: target.displayName,
+          message: validation.message,
+        });
       }
 
       const result = await fetchOkxTicker({
@@ -69,14 +95,12 @@ export async function getMarketCollection({
         };
       }
 
-      const fallback = getDemoMarketItem(target);
-      warnings.push(`${target.market} ${target.symbol} failed, using demo fallback`);
-      return {
-        ...fallback,
-        source: "DEMO" as const,
-        quoteQuality: "fallback" as const,
-        stale: true,
-      };
+      warnings.push(`${target.market} ${target.symbol} failed, no cache available`);
+      return createOkxErrorMarketData({
+        symbol: target.symbol,
+        displayName: target.displayName,
+        message: result.message || "OKX ticker failed",
+      });
     }),
   );
 

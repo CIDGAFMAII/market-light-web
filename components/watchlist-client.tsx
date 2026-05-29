@@ -48,6 +48,7 @@ export function WatchlistClient() {
   const [deviceId, setDeviceId] = useState(defaultDeviceId);
   const [detailChartRange, setDetailChartRange] = useState<DetailChartRange>("15m");
   const [loadingId, setLoadingId] = useState("");
+  const [addingAsset, setAddingAsset] = useState(false);
   const [savingDevice, setSavingDevice] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -55,12 +56,16 @@ export function WatchlistClient() {
   useEffect(() => {
     const raw = window.localStorage.getItem(storageKey);
     const savedDetailChartRange = window.localStorage.getItem(detailChartRangeStorageKey);
+    let nextItems = defaultItems;
     setOrigin(window.location.origin);
     try {
-      setItems(raw ? JSON.parse(raw) : defaultItems);
+      const parsed = raw ? JSON.parse(raw) : defaultItems;
+      nextItems = Array.isArray(parsed) ? parsed : defaultItems;
     } catch {
-      setItems(defaultItems);
+      nextItems = defaultItems;
     }
+    setItems(nextItems);
+    void validateLoadedOkxItems(nextItems);
     if (isDetailChartRange(savedDetailChartRange)) {
       setDetailChartRange(savedDetailChartRange);
     }
@@ -74,8 +79,48 @@ export function WatchlistClient() {
     }
   }, [detailChartRange, items, loaded]);
 
+  async function validateLoadedOkxItems(loadedItems: WatchItem[]) {
+    const okxItems = loadedItems.filter((item) => item.market === "OKX");
+    if (okxItems.length === 0) return;
+
+    const validationResults = await Promise.all(
+      okxItems.map(async (item) => ({
+        id: item.id,
+        validation: await validateOkxInstrumentClient(item.symbol),
+      })),
+    );
+    const validationMap = new Map(validationResults.map((result) => [result.id, result.validation]));
+
+    setItems((current) => current.map((item) => {
+      const validation = validationMap.get(item.id);
+      if (!validation) return item;
+
+      if (validation.ok) {
+        return {
+          ...item,
+          validation: {
+            ok: true,
+            message: "Valid / Live",
+            json: validation.json,
+          },
+        };
+      }
+
+      return {
+        ...item,
+        enabled: false,
+        syncToDevice: false,
+        validation: {
+          ok: false,
+          message: "找不到此 OKX 交易對",
+          json: validation.json,
+        },
+      };
+    }));
+  }
+
   const deviceSyncItems = useMemo(
-    () => items.filter((item) => item.syncToDevice),
+    () => items.filter(isItemEligibleForDevice),
     [items],
   );
   const deviceSymbolList = useMemo(
@@ -91,7 +136,7 @@ export function WatchlistClient() {
     ? `${origin}/api/device/config?deviceId=${encodeURIComponent(deviceId.trim())}`
     : "";
 
-  function addItem() {
+  async function addItem() {
     const cleanSymbol = symbol.trim().toUpperCase();
     const cleanDisplayName = displayName.trim() || cleanSymbol;
 
@@ -115,9 +160,23 @@ export function WatchlistClient() {
       return;
     }
 
+    if (market === "OKX") {
+      setAddingAsset(true);
+      const validation = await validateOkxInstrumentClient(cleanSymbol);
+      setAddingAsset(false);
+
+      if (!validation.ok) {
+        setNotice({ tone: "error", message: "找不到此 OKX 交易對，請確認格式，例如 BTC-USDT。" });
+        return;
+      }
+    }
+
     setItems((current) => [
       ...current,
-      createItem(market, cleanSymbol, cleanDisplayName, "tse"),
+      {
+        ...createItem(market, cleanSymbol, cleanDisplayName, "tse"),
+        validation: market === "OKX" ? { ok: true, message: "Valid / Live" } : undefined,
+      },
     ]);
     setNotice({ tone: "success", message: "已新增到自選資產，可到市場看盤的『我的自選』查看。" });
   }
@@ -178,12 +237,29 @@ export function WatchlistClient() {
 
     setSavingDevice(true);
     try {
+      const validation = await buildValidatedDeviceSymbols(items);
+      if (validation.invalidIds.size > 0) {
+        setItems((current) => current.map((item) => (
+          validation.invalidIds.has(item.id)
+            ? {
+                ...item,
+                enabled: false,
+                syncToDevice: false,
+                validation: {
+                  ok: false,
+                  message: "找不到此 OKX 交易對",
+                },
+              }
+            : item
+        )));
+      }
+
       const response = await fetch("/api/device/sync-symbols", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           deviceId: cleanDeviceId,
-          syncSymbols: deviceSymbolList,
+          syncSymbols: validation.syncSymbols,
           settings: {
             detailChartRange,
           },
@@ -195,7 +271,12 @@ export function WatchlistClient() {
         throw new Error(json.message || "Save to ESP32 Device failed");
       }
 
-      setNotice({ tone: "success", message: "已更新 ESP32 顯示清單。" });
+      setNotice({
+        tone: "success",
+        message: validation.invalidIds.size > 0
+          ? "已更新 ESP32 顯示清單，並略過無效 OKX 交易對。"
+          : "已更新 ESP32 顯示清單。",
+      });
     } catch (error) {
       setNotice({
         tone: "error",
@@ -252,8 +333,8 @@ export function WatchlistClient() {
             </select>
             <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value)} placeholder={market === "OKX" ? "BTC-USDT" : "2330"} />
             <input className="field" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="displayName" />
-            <button type="button" onClick={addItem} className="btn-primary">
-              Add Asset
+            <button type="button" onClick={addItem} disabled={addingAsset} className="btn-primary disabled:cursor-wait">
+              {addingAsset ? "驗證中" : "Add Asset"}
             </button>
           </div>
         </TerminalPanel>
@@ -420,6 +501,59 @@ function createItemId(market: WatchMarket, symbol: string) {
 
 function formatMarket(market: WatchMarket) {
   return market === "TWSE" ? "TWSE Demo" : "OKX";
+}
+
+function isItemEligibleForDevice(item: WatchItem) {
+  if (!item.syncToDevice) return false;
+  if (item.market === "TWSE") return true;
+  return item.validation?.ok === true;
+}
+
+async function validateOkxInstrumentClient(symbol: string) {
+  try {
+    const response = await fetch(`/api/provider/okx/instruments?instType=SPOT&instId=${encodeURIComponent(symbol)}`, {
+      cache: "no-store",
+    });
+    const json = await response.json();
+    const ok = Boolean(json.success && json.items?.[0]?.state === "live");
+
+    return {
+      ok,
+      json,
+      message: ok ? "Valid / Live" : json.message || "找不到此 OKX 交易對",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "OKX validation failed",
+    };
+  }
+}
+
+async function buildValidatedDeviceSymbols(items: WatchItem[]) {
+  const invalidIds = new Set<string>();
+  const syncSymbols: string[] = [];
+
+  for (const item of items) {
+    if (!item.syncToDevice) continue;
+
+    if (item.market === "TWSE") {
+      syncSymbols.push(`${item.market}:${item.symbol}`);
+      continue;
+    }
+
+    const validation = item.validation?.ok === true
+      ? { ok: true }
+      : await validateOkxInstrumentClient(item.symbol);
+
+    if (validation.ok) {
+      syncSymbols.push(`${item.market}:${item.symbol}`);
+    } else {
+      invalidIds.add(item.id);
+    }
+  }
+
+  return { syncSymbols, invalidIds };
 }
 
 function createItem(market: WatchMarket, symbol: string, displayName: string, exchange: "tse" | "otc"): WatchItem {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { defaultDeviceId, updateDeviceConfig } from "@/lib/device/device-config-store";
 import { isDetailChartRange } from "@/lib/market/providers/okx-candles";
 import { normalizeSyncSymbols } from "@/lib/market/symbols";
+import { validateOkxSymbol } from "@/lib/market/validation";
 
 export async function POST(request: Request) {
   try {
@@ -12,13 +13,21 @@ export async function POST(request: Request) {
 
     const deviceId = typeof body.deviceId === "string" ? body.deviceId : defaultDeviceId;
     const { syncSymbols, invalidSymbols } = normalizeSyncSymbols(body.syncSymbols);
+    const invalidOkxSymbols: string[] = [];
 
-    if (invalidSymbols.length > 0) {
+    for (const token of syncSymbols) {
+      if (!token.startsWith("OKX:")) continue;
+      const symbol = token.slice("OKX:".length);
+      const valid = await validateOkxSymbol(symbol);
+      if (!valid) invalidOkxSymbols.push(token);
+    }
+
+    if (invalidSymbols.length > 0 || invalidOkxSymbols.length > 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "syncSymbols only accepts TWSE:number or OKX:XXX-YYY",
-          invalidSymbols,
+          message: "syncSymbols only accepts TWSE:number or valid OKX instruments",
+          invalidSymbols: [...invalidSymbols, ...invalidOkxSymbols],
         },
         { status: 200 },
       );

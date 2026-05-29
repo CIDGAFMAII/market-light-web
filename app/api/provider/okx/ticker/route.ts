@@ -1,13 +1,25 @@
 import { NextResponse } from "next/server";
 import { findMarketCache, upsertMarketCache } from "@/lib/market/cache";
-import { getDemoMarketItemBySymbol } from "@/lib/market/demo-provider";
 import { fetchOkxTicker } from "@/lib/market/providers/okx-ticker";
+import { createOkxErrorMarketData, getOkxSymbolValidation } from "@/lib/market/validation";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const instId = searchParams.get("instId") || "BTC-USDT";
 
   try {
+    const validation = await getOkxSymbolValidation(instId);
+    if (!validation.valid) {
+      return NextResponse.json({
+        success: true,
+        ...createOkxErrorMarketData({
+          symbol: instId,
+          message: validation.message,
+        }),
+        warning: validation.message,
+      });
+    }
+
     const result = await fetchOkxTicker({ instId });
 
     if (result.success && result.data) {
@@ -28,11 +40,13 @@ export async function GET(request: Request) {
       });
     }
 
-    const fallback = getDemoMarketItemBySymbol(instId, "OKX");
     return NextResponse.json({
       success: true,
-      ...fallback,
-      warning: "Real provider failed, using demo fallback",
+      ...createOkxErrorMarketData({
+        symbol: instId,
+        message: result.message || "OKX ticker failed",
+      }),
+      warning: "Real provider failed, no cache available",
       providerMessage: result.message,
     });
   } catch (error) {
