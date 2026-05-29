@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { defaultDeviceId, getDeviceConfig, updateDeviceConfig } from "@/lib/device/device-config-store";
 import { isCompanionMode } from "@/lib/companion";
+import { isDetailChartRange } from "@/lib/market/providers/okx-candles";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -64,6 +65,9 @@ function normalizeSettings(settings: Record<string, unknown>) {
       : {}),
     ...(typeof settings.refreshIntervalSec === "number" && Number.isFinite(settings.refreshIntervalSec)
       ? { refreshIntervalSec: settings.refreshIntervalSec }
+      : {}),
+    ...(typeof settings.detailChartRange === "string" && isDetailChartRange(settings.detailChartRange)
+      ? { detailChartRange: settings.detailChartRange }
       : {}),
     ...(typeof settings.brightness === "number" && Number.isFinite(settings.brightness)
       ? { brightness: settings.brightness }

@@ -92,13 +92,14 @@ The default is International mode because the competition demo flow uses OKX cry
 `/demo` is the competition showcase page for judges and live demos. It now simulates the finalized ESP32 three-button interaction model:
 
 - Current screen mode: `MARKET / DETAIL / FLIRT`
-- Current market source: `LIVE / GOOD / BAD / CRAZY / ERROR`
+- Current market source: `LIVE / GOOD / BAD / CRAZY_UP / CRAZY_DOWN / ERROR`
 - Quiet Mode: `ON / OFF`
-- OLED source labels: `[LIVE]`, `[GOOD]`, `[BAD]`, `[CRAZY]`, `[ERROR]`
+- OLED source labels: `[LIVE]`, `[GOOD]`, `[BAD]`, `[CRAZY+]`, `[CRAZY-]`, `[ERROR]`
 - Quiet Mode adds `q`, for example `[LIVE q]`
 - Web buttons simulate `A Short`, `A Double`, `A Long`, `B Short`, and `C Short`
-- Fixed demo market states: `GOOD = +3.2%`, `BAD = -4.8%`, `CRAZY = +/-8.5%`, `ERROR = API Lost`
+- Fixed demo market states: `GOOD = +3.2%`, `BAD = -4.8%`, `CRAZY_UP = +8.5%`, `CRAZY_DOWN = -8.5%`, `ERROR = API Lost`
 - Flirt lines are limited to two short OLED-friendly lines.
+- DETAIL mode shows symbol, price, and a sparkline. OKX assets can use OKX candles data through `/api/device/chart`; Taiwan stock demo rows use demo sparklines.
 - Taiwan stock screens are demo data; the focus is ESP32 sync and alert flow.
 
 ## ESP32 Three-Button Logic
@@ -117,7 +118,7 @@ currentSymbol = first synced symbol
 Market source cycle:
 
 ```text
-LIVE -> DEMO_GOOD -> DEMO_BAD -> DEMO_CRAZY -> DEMO_ERROR -> LIVE
+LIVE -> DEMO_GOOD -> DEMO_BAD -> DEMO_CRAZY_UP -> DEMO_CRAZY_DOWN -> DEMO_ERROR -> LIVE
 ```
 
 OLED source labels:
@@ -126,9 +127,11 @@ OLED source labels:
 [LIVE]
 [GOOD]
 [BAD]
-[CRAZY]
+[CRAZY+]
+[CRAZY-]
 [ERROR]
 [LIVE q] when Quiet Mode is ON
+[CRAZY+ q] and [CRAZY- q] when Quiet Mode is ON
 ```
 
 Button A:
@@ -153,20 +156,41 @@ Button C:
 
 DETAIL mode:
 
-- Shows `High / Low / Vol` style details.
-- A Short switches to the next symbol's details.
+- Shows `symbol / price / sparkline`.
+- A Short switches to the next symbol's detail chart.
 - B Short switches source and stays in `DETAIL`.
 - C Short returns directly to `MARKET`.
 - Idle timeout returns to `MARKET` after 10 seconds from the last operation.
+
+DETAIL chart range:
+
+```text
+5m / 15m / 1h / 24h
+```
+
+For OKX assets, the detail chart can be fetched from the OKX candles endpoint through the Market Light API:
+
+```text
+GET /api/device/chart?symbol=OKX:BTC-USDT&range=15m
+```
+
+The chart API uses a 60 second in-memory cache per `OKX_CHART:<symbol>:<range>` key. If OKX candles fail, the API returns stale cache when available; otherwise it returns a demo sparkline so DETAIL mode does not go blank.
+
+Future ESP32 firmware should not request charts on every ticker refresh. Suggested behavior:
+
+- Market ticker: poll `/api/device/market` according to `refreshIntervalSec`.
+- Detail chart: request `/api/device/chart` only when entering `DETAIL`, switching symbol, or switching chart range.
+- ESP32 may also use locally accumulated points as a fallback.
 
 Flirt Mode:
 
 - Flirt lines depend only on market state, not per-stock personality.
 - `GOOD`: rising, lightly playful.
 - `BAD`: falling, comforting.
-- `CRAZY`: volatile, calming.
+- `CRAZY_UP`: violent upside move, playful but cautious.
+- `CRAZY_DOWN`: violent downside move, comforting and steady.
 - `ERROR`: API / Wi-Fi easter egg.
-- `LIVE`: chooses the closest state from real change percent.
+- `LIVE`: maps `up / up_alert` to `GOOD`, `down / down_alert` to `BAD`, future strong upside to `CRAZY_UP`, future strong downside to `CRAZY_DOWN`, and `error` to `ERROR`.
 - Lines must fit a 0.96 inch OLED: at most two lines, roughly 6-9 Chinese characters per line.
 
 Examples:
@@ -344,6 +368,13 @@ Device Market by device ID:
 
 ```text
 http://localhost:3000/api/device/market?deviceId=ML-ESP32-DEMO
+```
+
+Device Chart:
+
+```text
+http://localhost:3000/api/device/chart?symbol=OKX:BTC-USDT&range=15m
+http://localhost:3000/api/device/chart?symbol=TWSE:2330&range=15m
 ```
 
 Device Config:

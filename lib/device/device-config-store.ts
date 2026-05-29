@@ -1,10 +1,12 @@
 import type { CompanionMode } from "@/lib/companion";
+import type { DetailChartRange } from "@/lib/market/providers/okx-candles";
 
 export type DeviceSettings = {
   demoMode: boolean;
   quietMode: boolean;
   companionMode: CompanionMode;
   refreshIntervalSec: number;
+  detailChartRange: DetailChartRange;
   brightness: number;
   buzzerEnabled: boolean;
 };
@@ -28,6 +30,7 @@ const defaultSettings: DeviceSettings = {
   quietMode: false,
   companionMode: "normal",
   refreshIntervalSec: 30,
+  detailChartRange: "15m",
   brightness: 80,
   buzzerEnabled: false,
 };

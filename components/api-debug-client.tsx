@@ -128,6 +128,7 @@ export function ApiDebugClient() {
             quietMode: false,
             companionMode: "flirt",
             refreshIntervalSec: 30,
+            detailChartRange: "15m",
             brightness: 80,
             buzzerEnabled: false,
           },
