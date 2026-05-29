@@ -9,7 +9,7 @@ export default function CompanionPage() {
         <div>
           <Link href="/dashboard" className="back-link">← 控制台</Link>
           <h1 className="page-title mt-4">Companion Mode</h1>
-          <p className="page-copy mt-3">設定小助手語氣，維持提醒清楚、輕量且不打擾。</p>
+          <p className="page-copy mt-3">網站文案沙盒；ESP32 最終三鍵 Flirt Mode 以 /demo 規格為準。</p>
         </div>
         <StatusBadge status="calm" />
       </div>

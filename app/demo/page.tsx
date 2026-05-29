@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CopyJsonButton } from "@/components/copy-json-button";
 import { OLEDPreview } from "@/components/oled-preview";
 import { PetFace } from "@/components/pet-face";
@@ -9,68 +9,135 @@ import { RGBStatus } from "@/components/rgb-status";
 import { StatusBadge } from "@/components/status-badge";
 import { TerminalPanel } from "@/components/terminal-panel";
 import { PriceColorModeToggle, usePriceColorMode } from "@/components/price-color-mode-toggle";
-import { companionMessage, type CompanionMode } from "@/lib/companion";
-import { demoStates } from "@/lib/demo-data";
+import { marketItems } from "@/lib/demo-data";
 import { getDirectionRgbColor } from "@/lib/market/color";
-import type { MarketStatus } from "@/lib/market-status";
+import { getMarketStatus, petFaces, statusLabels, type MarketStatus } from "@/lib/market-status";
 
-const statuses: MarketStatus[] = ["calm", "up", "up_alert", "down", "down_alert", "error", "closed"];
-const companionModes: CompanionMode[] = ["normal", "flirt", "quiet"];
-const statusButtonLabels: Record<MarketStatus, string> = {
-  calm: "平穩",
-  up: "上漲",
-  up_alert: "上漲提醒",
-  down: "下跌",
-  down_alert: "下跌提醒",
-  error: "API 異常",
-  closed: "休市",
-  quiet: "安靜",
+type ScreenMode = "MARKET" | "DETAIL" | "FLIRT";
+type DemoMarketSource = "LIVE" | "DEMO_GOOD" | "DEMO_BAD" | "DEMO_CRAZY" | "DEMO_ERROR";
+type FlirtTone = "GOOD" | "BAD" | "CRAZY" | "ERROR";
+
+const sourceCycle: DemoMarketSource[] = ["LIVE", "DEMO_GOOD", "DEMO_BAD", "DEMO_CRAZY", "DEMO_ERROR"];
+
+const sourceLabels: Record<DemoMarketSource, string> = {
+  LIVE: "LIVE",
+  DEMO_GOOD: "GOOD",
+  DEMO_BAD: "BAD",
+  DEMO_CRAZY: "CRAZY",
+  DEMO_ERROR: "ERROR",
+};
+
+const fixedDemoChange: Record<Exclude<DemoMarketSource, "LIVE">, number> = {
+  DEMO_GOOD: 3.2,
+  DEMO_BAD: -4.8,
+  DEMO_CRAZY: 8.5,
+  DEMO_ERROR: 0,
+};
+
+const flirtLines: Record<FlirtTone, [string, string]> = {
+  GOOD: ["不要追高", "但可以追我"],
+  BAD: ["跌的是價格", "不是你的價值"],
+  CRAZY: ["市場在震", "你先穩"],
+  ERROR: ["不是不回你", "是我連不上"],
 };
 
 export default function DemoPage() {
-  const [status, setStatus] = useState<MarketStatus>("up_alert");
-  const [companionMode, setCompanionMode] = useState<CompanionMode>("normal");
+  const [screenMode, setScreenMode] = useState<ScreenMode>("MARKET");
+  const [marketSource, setMarketSource] = useState<DemoMarketSource>("LIVE");
+  const [quietMode, setQuietMode] = useState(false);
+  const [symbolIndex, setSymbolIndex] = useState(0);
+  const [lastDetailActionAt, setLastDetailActionAt] = useState(Date.now());
   const { priceColorMode, setPriceColorMode } = usePriceColorMode();
-  const data = demoStates[status];
-  const deviceId = "ML-ESP32-DEMO";
-  const rgbColor = getDirectionRgbColor(status, priceColorMode);
+
+  const item = marketItems[symbolIndex % marketItems.length];
+  const quote = useMemo(() => buildQuote(item, marketSource, symbolIndex), [item, marketSource, symbolIndex]);
+  const sourceTag = `[${sourceLabels[marketSource]}${quietMode ? " q" : ""}]`;
+  const flirtTone = getFlirtTone(quote.status, quote.changePercent, marketSource);
+  const activeFlirtLines = flirtLines[flirtTone];
+  const rgbColor = getDirectionRgbColor(quote.status, priceColorMode);
+
+  const oledLines = useMemo(
+    () => buildOledLines({ screenMode, sourceTag, quote, flirtLines: activeFlirtLines }),
+    [activeFlirtLines, quote, screenMode, sourceTag],
+  );
 
   const json = useMemo(
     () => ({
-      deviceId,
-      mode: "demo",
-      status,
-      companionMode,
+      deviceId: "ML-ESP32-DEMO",
+      screenMode,
+      marketSource,
+      quietMode,
+      currentSymbol: quote.symbol,
+      buttons: {
+        A: "short=next, double=quiet, long=detail",
+        B: "cycle market source",
+        C: "market/flirt, detail returns market",
+      },
       oled: {
-        line1: data.line1,
-        line2: data.line2,
-        line3: data.line3,
-        line4: data.line4,
+        line1: oledLines.line1,
+        line2: oledLines.line2,
+        line3: oledLines.line3,
+        line4: oledLines.line4,
       },
-      rgb: {
-        color: rgbColor,
-        pulse: status.includes("alert"),
+      quote: {
+        symbol: quote.symbol,
+        displayName: quote.displayName,
+        price: quote.price,
+        changePercent: quote.changePercent,
+        sourceLabel: sourceLabels[marketSource],
+        status: quote.status,
       },
-      pet: {
-        status,
-        message: companionMessage(status, companionMode),
+      quietOutput: {
+        buzzer: quietMode ? "reduced/off" : "normal",
+        rgbBrightness: quietMode ? "dim" : "normal",
+        oled: "unchanged",
       },
-      fallback: {
-        source: status === "error" || status === "closed" ? "DEMO" : "TWSE/OKX",
-        stale: status === "error" || status === "closed",
-        warning: status === "error" ? "Real provider failed, using demo fallback" : "",
-      },
-      buzzer: {
-        enabled: status.includes("alert") && status !== "quiet",
-      },
-      api: {
-        config: `/api/device/config?deviceId=${deviceId}`,
-        market: `/api/device/market?deviceId=${deviceId}`,
-      },
-      updatedAt: "2026-05-29T07:12:08+08:00",
     }),
-    [companionMode, data, rgbColor, status],
+    [marketSource, oledLines, quietMode, quote, screenMode],
   );
+
+  useEffect(() => {
+    if (screenMode !== "DETAIL") return undefined;
+
+    const timer = window.setTimeout(() => {
+      setScreenMode("MARKET");
+    }, 10_000);
+
+    return () => window.clearTimeout(timer);
+  }, [lastDetailActionAt, screenMode]);
+
+  function touchDetailTimer() {
+    setLastDetailActionAt(Date.now());
+  }
+
+  function pressAShort() {
+    setSymbolIndex((current) => current + 1);
+    if (screenMode === "DETAIL") touchDetailTimer();
+  }
+
+  function pressADouble() {
+    setQuietMode((current) => !current);
+    if (screenMode === "DETAIL") touchDetailTimer();
+  }
+
+  function pressALong() {
+    setScreenMode("DETAIL");
+    touchDetailTimer();
+  }
+
+  function pressBShort() {
+    setMarketSource((current) => sourceCycle[(sourceCycle.indexOf(current) + 1) % sourceCycle.length]);
+    if (screenMode === "DETAIL") touchDetailTimer();
+  }
+
+  function pressCShort() {
+    if (screenMode === "MARKET") {
+      setScreenMode("FLIRT");
+      return;
+    }
+
+    setScreenMode("MARKET");
+  }
 
   return (
     <main className="page-shell">
@@ -78,125 +145,239 @@ export default function DemoPage() {
         <div className="page-header">
           <div>
             <Link href="/" className="back-link">← 首頁</Link>
-            <h1 className="page-title">裝置展示模式</h1>
-            <p className="page-copy">競賽展示用：OLED、RGB、小助手、fallback 與 ESP32 API 資料流集中在這裡。</p>
-            <p className="mt-2 text-sm text-amber-200">台股畫面為展示資料，重點是呈現 ESP32 同步與提醒流程。</p>
+            <h1 className="page-title">ESP32 三鍵展示</h1>
+            <p className="page-copy">網站模擬最新三鍵互動與 OLED 顯示邏輯；ESP32 firmware 尚未實作。</p>
+            <p className="mt-2 text-sm text-amber-200">台股畫面為展示資料，重點是呈現三鍵狀態、同步資產與提醒流程。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <PriceColorModeToggle mode={priceColorMode} onChange={setPriceColorMode} />
-            <StatusBadge status={status} colorMode={priceColorMode} />
+            <StatusBadge status={quote.status} colorMode={priceColorMode} />
           </div>
         </div>
 
-        <section className="grid gap-5 lg:grid-cols-[1fr_0.85fr_1fr]">
-          <TerminalPanel title="OLED 模擬器" label="128x64">
-            <OLEDPreview line1={data.line1} line2={data.line2} line3={data.line3} line4={data.line4} status={status} colorMode={priceColorMode} />
-            <div className="mt-4 text-sm leading-7 text-slate-300">{data.note}</div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(status === "error" || status === "closed") ? (
-                <>
-                  <span className="badge">DEMO</span>
-                  <span className="badge border-amber-400/30 bg-amber-400/10 text-amber-200">STALE</span>
-                </>
-              ) : (
-                <span className="badge border-indigo-400/30 bg-indigo-500/10 text-indigo-200">REAL</span>
-              )}
+        <section className="grid gap-5 lg:grid-cols-[1fr_0.9fr_1fr]">
+          <TerminalPanel title="OLED Preview" label={sourceTag}>
+            <OLEDPreview
+              line1={oledLines.line1}
+              line2={oledLines.line2}
+              line3={oledLines.line3}
+              line4={oledLines.line4}
+              status={quote.status}
+              colorMode={priceColorMode}
+            />
+            <div className="mt-4 grid gap-2 text-sm text-slate-300 sm:grid-cols-3">
+              <StatePill label="畫面" value={screenMode} />
+              <StatePill label="來源" value={sourceLabels[marketSource]} />
+              <StatePill label="Quiet" value={quietMode ? "ON" : "OFF"} />
             </div>
           </TerminalPanel>
 
-          <TerminalPanel title="RGB 輸出" label="GPIO">
-            <RGBStatus status={status} color={rgbColor} />
+          <TerminalPanel title="輸出狀態" label="OLED/RGB">
+            <RGBStatus status={quote.status} color={quietMode ? "muted" : rgbColor} />
             <div className="mt-5">
-              <PetFace status={status} name="Miko" size="md" colorMode={priceColorMode} />
+              <PetFace status={quote.status} name={screenMode} size="md" colorMode={priceColorMode} />
             </div>
             <div className="mt-4 rounded-xl border border-slate-700/70 bg-slate-900/80 p-3 text-sm leading-6 text-slate-100">
-              {companionMessage(status, companionMode)}
+              Quiet Mode 只降低提醒強度；OLED 顯示與按鍵功能維持不變。
             </div>
           </TerminalPanel>
 
-          <TerminalPanel title="控制面板" label="輸入">
+          <TerminalPanel title="三鍵模擬" label="INPUT">
             <div className="grid grid-cols-2 gap-2">
-              {statuses.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setStatus(item)}
-                    className={`btn-secondary justify-center ${
-                    status === item
-                      ? "border-indigo-400/45 bg-indigo-500/15 text-indigo-100"
-                      : ""
-                  }`}
-                >
-                  {statusButtonLabels[item]}
-                </button>
-              ))}
+              <button className="btn-primary justify-center" type="button" onClick={pressAShort}>A Short</button>
+              <button className="btn-secondary justify-center" type="button" onClick={pressADouble}>A Double</button>
+              <button className="btn-secondary justify-center" type="button" onClick={pressALong}>A Long</button>
+              <button className="btn-secondary justify-center" type="button" onClick={pressBShort}>B Short</button>
+              <button className="btn-secondary justify-center sm:col-span-2" type="button" onClick={pressCShort}>C Short</button>
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              {companionModes.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setCompanionMode(mode)}
-                  className={`btn-secondary justify-center ${
-                    companionMode === mode
-                      ? "border-violet-400/45 bg-violet-500/15 text-violet-100"
-                      : ""
-                  }`}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
-            <div className="mt-5 grid gap-2">
-              <CopyJsonButton value={json} />
-              <button className="btn-secondary" type="button" onClick={() => setStatus("up_alert")}>重設展示</button>
-              <button className="btn-secondary border-amber-400/35 bg-amber-400/10 text-amber-100" type="button" onClick={() => setStatus("error")}>模擬 API 異常</button>
-              <button className="btn-secondary" type="button" onClick={() => setStatus("closed")}>模擬 TWSE 休市</button>
-              <button className="btn-secondary" type="button" onClick={() => setStatus("quiet")}>模擬安靜模式</button>
+            <div className="mt-5 space-y-2 text-sm leading-6 text-slate-300">
+              <RuleLine label="A" value="短按下一個，雙擊 Quiet，長按 Detail" />
+              <RuleLine label="B" value="只切行情來源，不改畫面模式" />
+              <RuleLine label="C" value="Market / Flirt，Detail 中回 Market" />
             </div>
           </TerminalPanel>
         </section>
 
         <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <TerminalPanel title="Fallback 情境" label="SOURCE">
-            <div className="space-y-3 text-sm leading-6 text-slate-300">
-              <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
-                真實資料：顯示 <span className="text-indigo-200">TWSE</span> / <span className="text-violet-200">OKX</span>
-              </div>
-              <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
-                fallback：顯示 <span className="text-slate-300">DEMO</span> 或 <span className="text-amber-200">CACHE</span>，並標記 <span className="text-amber-200">STALE</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStatus("error")}
-                className="btn-secondary border-amber-400/35 bg-amber-400/10 text-amber-100"
-              >
-                模擬 fallback warning
-              </button>
+          <TerminalPanel title="行情來源循環" label="SOURCE">
+            <div className="grid gap-3 sm:grid-cols-5">
+              {sourceCycle.map((source) => (
+                <div
+                  key={source}
+                  className={`rounded-xl border p-3 text-center text-sm font-semibold ${
+                    source === marketSource
+                      ? "border-indigo-400/50 bg-indigo-500/15 text-indigo-100"
+                      : "border-slate-700/70 bg-slate-900/80 text-slate-300"
+                  }`}
+                >
+                  {sourceLabels[source]}
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+              <RuleLine label="GOOD" value="+3.2%" />
+              <RuleLine label="BAD" value="-4.8%" />
+              <RuleLine label="CRAZY" value="+/-8.5%" />
+              <RuleLine label="ERROR" value="API Lost" />
             </div>
           </TerminalPanel>
 
-          <TerminalPanel title="Device API Demo" label="ESP32">
-            <div className="space-y-3 text-sm">
-              <div className="break-all rounded-xl border border-slate-700/70 bg-slate-900/80 p-3 font-mono text-indigo-100">
-                /api/device/config?deviceId={deviceId}
-              </div>
-              <div className="break-all rounded-xl border border-slate-700/70 bg-slate-900/80 p-3 font-mono text-indigo-100">
-                /api/device/market?deviceId={deviceId}
-              </div>
-              <div className="text-slate-300">ESP32 firmware 可固定讀取這兩條 URL，資產清單由 /watchlist 儲存到 server-side device config。</div>
+          <TerminalPanel title="Flirt Lines" label="2 LINES">
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-950/80 p-5 font-mono text-2xl leading-relaxed text-indigo-100">
+              <div>{activeFlirtLines[0]}</div>
+              <div>{activeFlirtLines[1]}</div>
+            </div>
+            <div className="mt-4 text-sm leading-6 text-slate-300">
+              Flirt 台詞只依行情狀態決定，控制在 0.96 吋 OLED 可讀的兩行短句。
             </div>
           </TerminalPanel>
         </section>
 
-        <section className="mt-5">
-          <TerminalPanel title="ESP32 JSON Preview" label="資料包">
-            <pre className="code-block">
+        <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
+          <TerminalPanel title="DETAIL 行為" label="10s">
+            <div className="space-y-3 text-sm leading-6 text-slate-300">
+              <RuleLine label="A Short" value="切下一個標的詳細資料" />
+              <RuleLine label="B Short" value="切行情來源，仍留在 DETAIL" />
+              <RuleLine label="C Short" value="直接回 MARKET，不進 FLIRT" />
+              <RuleLine label="Idle" value="最後一次操作後 10 秒回 MARKET" />
+            </div>
+          </TerminalPanel>
+
+          <TerminalPanel title="ESP32 JSON Preview" label="STATE">
+            <div className="mb-3 flex justify-end">
+              <CopyJsonButton value={json} />
+            </div>
+            <pre className="code-block max-h-96">
               {JSON.stringify(json, null, 2)}
             </pre>
           </TerminalPanel>
         </section>
       </div>
     </main>
+  );
+}
+
+function buildQuote(item: (typeof marketItems)[number], source: DemoMarketSource, symbolIndex: number) {
+  if (source === "DEMO_ERROR") {
+    return {
+      symbol: item.symbol,
+      displayName: item.name,
+      price: item.price,
+      changePercent: 0,
+      high: item.price,
+      low: item.price,
+      volume: 0,
+      status: "error" as MarketStatus,
+    };
+  }
+
+  if (source === "LIVE") {
+    return {
+      symbol: item.symbol,
+      displayName: item.name,
+      price: item.price,
+      changePercent: item.changePercent,
+      high: item.price + Math.abs(item.change),
+      low: item.price - Math.abs(item.change),
+      volume: 128000 + symbolIndex * 17000,
+      status: item.status,
+    };
+  }
+
+  const demoChangePercent =
+    source === "DEMO_CRAZY" && symbolIndex % 2 === 1
+      ? -fixedDemoChange.DEMO_CRAZY
+      : fixedDemoChange[source];
+  const status = getMarketStatus({ changePercent: demoChangePercent });
+  const price = source === "DEMO_CRAZY" ? item.price * (1 + demoChangePercent / 100) : item.price;
+
+  return {
+    symbol: item.symbol,
+    displayName: item.name,
+    price,
+    changePercent: demoChangePercent,
+    high: price * 1.012,
+    low: price * 0.988,
+    volume: 200000 + symbolIndex * 21000,
+    status,
+  };
+}
+
+function buildOledLines({
+  screenMode,
+  sourceTag,
+  quote,
+  flirtLines: lines,
+}: {
+  screenMode: ScreenMode;
+  sourceTag: string;
+  quote: ReturnType<typeof buildQuote>;
+  flirtLines: [string, string];
+}) {
+  if (screenMode === "FLIRT") {
+    return {
+      line1: sourceTag,
+      line2: lines[0],
+      line3: lines[1],
+      line4: quote.symbol,
+    };
+  }
+
+  if (screenMode === "DETAIL") {
+    return {
+      line1: `${sourceTag} ${quote.symbol}`,
+      line2: `H ${formatNumber(quote.high)}`,
+      line3: `L ${formatNumber(quote.low)}`,
+      line4: `Vol ${formatNumber(quote.volume)}`,
+    };
+  }
+
+  if (quote.status === "error") {
+    return {
+      line1: `${sourceTag} ${quote.symbol}`,
+      line2: "API Lost",
+      line3: `${petFaces.error} Wi-Fi`,
+      line4: "B switch src",
+    };
+  }
+
+  const sign = quote.changePercent > 0 ? "+" : "";
+  return {
+    line1: `${sourceTag} ${quote.symbol}`,
+    line2: `${formatNumber(quote.price)} ${sign}${quote.changePercent.toFixed(1)}%`,
+    line3: `${petFaces[quote.status]} ${statusLabels[quote.status]}`,
+    line4: quote.displayName,
+  };
+}
+
+function getFlirtTone(status: MarketStatus, changePercent: number, source: DemoMarketSource): FlirtTone {
+  if (source === "DEMO_ERROR" || status === "error") return "ERROR";
+  if (source === "DEMO_CRAZY" || Math.abs(changePercent) >= 8) return "CRAZY";
+  if (changePercent < 0) return "BAD";
+  return "GOOD";
+}
+
+function formatNumber(value: number) {
+  if (!Number.isFinite(value)) return "--";
+  if (Math.abs(value) >= 1000) return value.toFixed(0);
+  return value.toFixed(2);
+}
+
+function StatePill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+      <div className="text-xs font-semibold text-slate-400">{label}</div>
+      <div className="mt-1 font-mono text-slate-100">{value}</div>
+    </div>
+  );
+}
+
+function RuleLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+      <span className="font-semibold text-indigo-200">{label}</span>
+      <span className="text-slate-500"> / </span>
+      <span>{value}</span>
+    </div>
   );
 }

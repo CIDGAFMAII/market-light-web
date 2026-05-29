@@ -89,16 +89,101 @@ The default is International mode because the competition demo flow uses OKX cry
 
 ## Demo Page
 
-`/demo` is the competition showcase page for judges and live demos. It contains the visual and narrative device experience:
+`/demo` is the competition showcase page for judges and live demos. It now simulates the finalized ESP32 three-button interaction model:
 
-- OLED preview
-- RGB / status preview
-- Companion face and `normal / flirt / quiet` message modes
-- Interactive status switching: `calm / up / up_alert / down / down_alert / error / closed`
-- Fallback scenario demonstration with `DEMO` / `STALE` badges
-- ESP32 JSON preview
-- Device config and device market API URL examples
+- Current screen mode: `MARKET / DETAIL / FLIRT`
+- Current market source: `LIVE / GOOD / BAD / CRAZY / ERROR`
+- Quiet Mode: `ON / OFF`
+- OLED source labels: `[LIVE]`, `[GOOD]`, `[BAD]`, `[CRAZY]`, `[ERROR]`
+- Quiet Mode adds `q`, for example `[LIVE q]`
+- Web buttons simulate `A Short`, `A Double`, `A Long`, `B Short`, and `C Short`
+- Fixed demo market states: `GOOD = +3.2%`, `BAD = -4.8%`, `CRAZY = +/-8.5%`, `ERROR = API Lost`
+- Flirt lines are limited to two short OLED-friendly lines.
 - Taiwan stock screens are demo data; the focus is ESP32 sync and alert flow.
+
+## ESP32 Three-Button Logic
+
+ESP32 firmware is not implemented in this repository. The `/demo` page is a website simulation of the intended button behavior and OLED display logic. Future firmware should follow this specification.
+
+Initial state:
+
+```text
+screenMode = MARKET
+marketSource = LIVE
+quietMode = OFF
+currentSymbol = first synced symbol
+```
+
+Market source cycle:
+
+```text
+LIVE -> DEMO_GOOD -> DEMO_BAD -> DEMO_CRAZY -> DEMO_ERROR -> LIVE
+```
+
+OLED source labels:
+
+```text
+[LIVE]
+[GOOD]
+[BAD]
+[CRAZY]
+[ERROR]
+[LIVE q] when Quiet Mode is ON
+```
+
+Button A:
+
+- Short press: switch to the next symbol, keeping the current screen mode.
+- Double click: toggle Quiet Mode.
+- Long press: enter `DETAIL`.
+
+Quiet Mode only reduces alert intensity. It can reduce or disable buzzer output and dim RGB brightness. OLED content and button behavior stay unchanged.
+
+Button B:
+
+- Short press: switch market source.
+- B only changes source and never changes `screenMode`.
+- In `FLIRT`, B still switches source and the Flirt line updates from the new market state.
+
+Button C:
+
+- In `MARKET`: enter `FLIRT` and generate a short Flirt line.
+- In `FLIRT`: return to `MARKET`.
+- In `DETAIL`: return directly to `MARKET`, not `FLIRT`.
+
+DETAIL mode:
+
+- Shows `High / Low / Vol` style details.
+- A Short switches to the next symbol's details.
+- B Short switches source and stays in `DETAIL`.
+- C Short returns directly to `MARKET`.
+- Idle timeout returns to `MARKET` after 10 seconds from the last operation.
+
+Flirt Mode:
+
+- Flirt lines depend only on market state, not per-stock personality.
+- `GOOD`: rising, lightly playful.
+- `BAD`: falling, comforting.
+- `CRAZY`: volatile, calming.
+- `ERROR`: API / Wi-Fi easter egg.
+- `LIVE`: chooses the closest state from real change percent.
+- Lines must fit a 0.96 inch OLED: at most two lines, roughly 6-9 Chinese characters per line.
+
+Examples:
+
+```text
+跌的是價格
+不是你的價值
+
+不要追高
+但可以追我
+
+市場在震
+你先穩
+
+不是不回你
+是我連不上
+```
 
 ## Watchlist
 
@@ -168,7 +253,7 @@ Current device config storage is an in-memory local/dev fallback only. On Vercel
 
 ## Companion Mode
 
-`/dashboard/companion` stores a local companion voice setting in `localStorage`.
+`/dashboard/companion` is a website-only copy sandbox stored in `localStorage`. It is not the final ESP32 button logic. The final ESP32 Flirt Mode behavior is documented in the three-button logic above and simulated in `/demo`.
 
 Supported modes:
 
