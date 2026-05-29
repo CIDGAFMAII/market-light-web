@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { companionMessage, isCompanionMode, type CompanionMode } from "@/lib/companion";
+import { petFaces, statusLabels } from "@/lib/market-status";
 import { StatusBadge } from "@/components/status-badge";
 import { TerminalPanel } from "@/components/terminal-panel";
 import type { MarketStatus } from "@/lib/market-status";
@@ -19,6 +21,12 @@ type MarketResponse = {
 type SortKey = "price" | "changePercent" | "volume";
 type MarketFilter = "ALL" | "TWSE" | "OKX";
 type StatusFilter = "ALL" | "up" | "down" | "up_alert" | "down_alert" | "calm";
+type SourceModeSetting = "real" | "demo";
+type RefreshInterval = 0 | 10 | 30 | 60;
+
+const sourceModeStorageKey = "market-light-market-source-mode-v1";
+const refreshStorageKey = "market-light-market-refresh-sec-v1";
+const companionStorageKey = "market-light-companion-mode-v1";
 
 const sourceClass: Record<MarketSource, string> = {
   TWSE: "border-cyan/40 text-cyan",
@@ -31,21 +39,26 @@ export function MarketBoardClient() {
   const [items, setItems] = useState<MarketData[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [updatedAt, setUpdatedAt] = useState("");
+  const [marketMood, setMarketMood] = useState<MarketStatus>("calm");
   const [sourceMode, setSourceMode] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sourceModeSetting, setSourceModeSetting] = useState<SourceModeSetting>("real");
+  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0);
+  const [companionMode, setCompanionMode] = useState<CompanionMode>("normal");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("changePercent");
   const [sortDesc, setSortDesc] = useState(true);
   const [marketFilter, setMarketFilter] = useState<MarketFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch("/api/public/market", { cache: "no-store" });
+      const endpoint = sourceModeSetting === "demo" ? "/api/public/market?demoMode=true" : "/api/public/market";
+      const response = await fetch(endpoint, { cache: "no-store" });
       const json = (await response.json()) as MarketResponse;
 
       if (!json.success) {
@@ -55,17 +68,46 @@ export function MarketBoardClient() {
       setItems(json.items ?? []);
       setWarnings(json.warnings ?? []);
       setUpdatedAt(json.updatedAt);
+      setMarketMood(json.marketMood ?? "calm");
       setSourceMode(json.sourceMode);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Market request failed");
     } finally {
       setLoading(false);
     }
-  }
+  }, [sourceModeSetting]);
 
   useEffect(() => {
-    void refresh();
+    const savedSourceMode = window.localStorage.getItem(sourceModeStorageKey);
+    const savedRefresh = Number(window.localStorage.getItem(refreshStorageKey));
+    const savedCompanionMode = window.localStorage.getItem(companionStorageKey);
+
+    if (savedSourceMode === "real" || savedSourceMode === "demo") {
+      setSourceModeSetting(savedSourceMode);
+    }
+    if (savedRefresh === 0 || savedRefresh === 10 || savedRefresh === 30 || savedRefresh === 60) {
+      setRefreshInterval(savedRefresh);
+    }
+    if (savedCompanionMode && isCompanionMode(savedCompanionMode)) {
+      setCompanionMode(savedCompanionMode);
+    }
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(sourceModeStorageKey, sourceModeSetting);
+    void refresh();
+  }, [refresh, sourceModeSetting]);
+
+  useEffect(() => {
+    window.localStorage.setItem(refreshStorageKey, String(refreshInterval));
+
+    if (refreshInterval === 0) return undefined;
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, refreshInterval * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [refresh, refreshInterval]);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -86,6 +128,21 @@ export function MarketBoardClient() {
         return sortDesc ? -diff : diff;
       });
   }, [items, marketFilter, query, sortDesc, sortKey, statusFilter]);
+
+  const moodSummary = useMemo(() => {
+    const alertCount = items.filter((item) => item.status === "up_alert" || item.status === "down_alert").length;
+    const upCount = items.filter((item) => item.changePercent > 0).length;
+    const downCount = items.filter((item) => item.changePercent < 0).length;
+    return `${statusLabels[marketMood]} / 上漲 ${upCount} / 下跌 ${downCount} / 警示 ${alertCount}`;
+  }, [items, marketMood]);
+
+  function updateSourceMode(nextMode: SourceModeSetting) {
+    setSourceModeSetting(nextMode);
+  }
+
+  function updateRefreshInterval(nextInterval: RefreshInterval) {
+    setRefreshInterval(nextInterval);
+  }
 
   return (
     <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
@@ -112,6 +169,36 @@ export function MarketBoardClient() {
         </div>
 
         <TerminalPanel title="看盤控制" label={sourceMode || "REAL"}>
+          <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_2fr]">
+            <div className="flex rounded border border-cyan/20 bg-black/40 p-1">
+              {(["real", "demo"] as SourceModeSetting[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => updateSourceMode(mode)}
+                  className={`flex-1 rounded px-3 py-2 text-sm uppercase tracking-[0.14em] ${
+                    sourceModeSetting === mode ? "bg-cyan/15 text-cyan" : "text-muted hover:text-cyan"
+                  }`}
+                >
+                  {mode === "real" ? "Real" : "Demo"}
+                </button>
+              ))}
+            </div>
+            <select
+              value={refreshInterval}
+              onChange={(event) => updateRefreshInterval(Number(event.target.value) as RefreshInterval)}
+              className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan"
+            >
+              <option value={0}>Auto refresh Off</option>
+              <option value={10}>Auto refresh 10s</option>
+              <option value={30}>Auto refresh 30s</option>
+              <option value={60}>Auto refresh 60s</option>
+            </select>
+            <div className="rounded border border-white/10 bg-black/35 px-3 py-2 text-sm text-muted">
+              <span className="text-cyan">{petFaces[marketMood]}</span>
+              <span className="ml-3 text-white">{companionMessage(marketMood, companionMode)}</span>
+            </div>
+          </div>
           <div className="grid gap-3 md:grid-cols-5">
             <input
               value={query}
@@ -144,6 +231,7 @@ export function MarketBoardClient() {
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-muted">
             <span>更新時間：{updatedAt ? new Date(updatedAt).toLocaleString("zh-TW") : "尚未更新"}</span>
             <span>顯示：{filteredItems.length} / {items.length}</span>
+            <span>marketMood：{moodSummary}</span>
           </div>
           {warnings.length > 0 ? (
             <div className="mt-4 rounded border border-yellow-400/35 bg-yellow/10 p-3 text-sm text-yellow">

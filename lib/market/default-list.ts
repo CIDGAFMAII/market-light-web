@@ -11,6 +11,11 @@ export const defaultMarketList: MarketTarget[] = [
 
 export const mockDeviceSettings = {
   demoMode: false,
+  quietMode: false,
+  companionMode: "normal",
+  refreshIntervalSec: 30,
+  brightness: 80,
+  buzzerEnabled: false,
 };
 
 export const mockDeviceStocks = defaultMarketList;

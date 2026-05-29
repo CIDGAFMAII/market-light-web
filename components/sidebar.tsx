@@ -5,7 +5,7 @@ const items = [
   { label: "裝置", href: "/dashboard" },
   { label: "綁定", href: "/dashboard" },
   { label: "股票", href: "/dashboard/stocks" },
-  { label: "小助手", href: "/dashboard" },
+  { label: "小助手", href: "/dashboard/companion" },
   { label: "API 偵錯", href: "/dashboard/api-debug" },
   { label: "展示模式", href: "/demo" },
 ];

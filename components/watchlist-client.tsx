@@ -30,18 +30,30 @@ const defaultItems: WatchItem[] = [
   createItem("OKX", "BTC-USDT", "BTC", "tse"),
 ];
 
+type Notice = {
+  tone: "success" | "error";
+  message: string;
+};
+
 export function WatchlistClient() {
   const [items, setItems] = useState<WatchItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [origin, setOrigin] = useState("http://localhost:3000");
   const [market, setMarket] = useState<WatchMarket>("TWSE");
   const [symbol, setSymbol] = useState("2330");
   const [displayName, setDisplayName] = useState("TSMC");
   const [exchange, setExchange] = useState<"tse" | "otc">("tse");
   const [loadingId, setLoadingId] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(storageKey);
-    setItems(raw ? JSON.parse(raw) : defaultItems);
+    setOrigin(window.location.origin);
+    try {
+      setItems(raw ? JSON.parse(raw) : defaultItems);
+    } catch {
+      setItems(defaultItems);
+    }
     setLoaded(true);
   }, []);
 
@@ -59,15 +71,42 @@ export function WatchlistClient() {
         .join(","),
     [items],
   );
+  const deviceQueryUrl = `${origin}/api/device/market?symbols=${deviceSymbols}`;
 
   function addItem() {
     const cleanSymbol = symbol.trim().toUpperCase();
-    if (!cleanSymbol) return;
+    const cleanDisplayName = displayName.trim() || cleanSymbol;
+
+    if (!cleanSymbol) {
+      setNotice({ tone: "error", message: "請先輸入商品代號。" });
+      return;
+    }
+
+    if (market === "TWSE" && !/^\d+$/.test(cleanSymbol)) {
+      setNotice({ tone: "error", message: "TWSE symbol 必須是數字，例如 2330。" });
+      return;
+    }
+
+    if (market === "OKX" && !/^[A-Z0-9]+-[A-Z0-9]+$/.test(cleanSymbol)) {
+      setNotice({ tone: "error", message: "OKX symbol 必須像 BTC-USDT。" });
+      return;
+    }
+
+    if (items.some((item) => item.market === market && item.symbol === cleanSymbol)) {
+      setNotice({ tone: "error", message: `${market}:${cleanSymbol} 已在自選清單中。` });
+      return;
+    }
 
     setItems((current) => [
       ...current,
-      createItem(market, cleanSymbol, displayName.trim() || cleanSymbol, exchange),
+      createItem(market, cleanSymbol, cleanDisplayName, exchange),
     ]);
+    setNotice({ tone: "success", message: `已新增 ${market}:${cleanSymbol}。` });
+  }
+
+  function resetItems() {
+    setItems(defaultItems.map((item) => ({ ...item, id: `${item.market}:${item.symbol}:${Date.now()}:${Math.random().toString(16).slice(2)}` })));
+    setNotice({ tone: "success", message: "已恢復預設自選清單。" });
   }
 
   function updateItem(id: string, patch: Partial<WatchItem>) {
@@ -157,10 +196,24 @@ export function WatchlistClient() {
               新增
             </button>
           </div>
+          {notice ? (
+            <div className={`mt-4 rounded border p-3 text-sm ${
+              notice.tone === "success"
+                ? "border-green-500/40 bg-green-500/10 text-green-300"
+                : "border-red-500/40 bg-red-500/10 text-red-300"
+            }`}>
+              {notice.message}
+            </div>
+          ) : null}
         </TerminalPanel>
 
         <section className="mt-5">
           <TerminalPanel title="清單管理" label={`${items.length} ITEMS`}>
+            <div className="mb-4 flex justify-end">
+              <button type="button" onClick={resetItems} className="rounded border border-yellow-400/40 px-3 py-2 text-sm text-yellow hover:bg-yellow/10">
+                Reset watchlist
+              </button>
+            </div>
             <div className="space-y-3">
               {items.map((item, index) => (
                 <div key={item.id} className="rounded border border-cyan/10 bg-black/25 p-4">
@@ -205,10 +258,10 @@ export function WatchlistClient() {
         <section className="mt-5">
           <TerminalPanel title="Device symbols query" label="ESP32">
             <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-sm text-cyan">
-              /api/device/market?symbols={deviceSymbols || "尚未選擇同步商品"}
+              {deviceSymbols ? deviceQueryUrl : "尚未選擇同步商品"}
             </div>
             <div className="mt-3 flex justify-end">
-              <CopyJsonButton value={{ symbols: deviceSymbols }} />
+              <CopyJsonButton value={{ url: deviceSymbols ? deviceQueryUrl : "", symbols: deviceSymbols }} />
             </div>
           </TerminalPanel>
         </section>

@@ -42,6 +42,11 @@ demo provider only
 `/market` is a watch-board style page with:
 
 - Real TWSE / OKX data from `/api/public/market`
+- Real / Demo switch:
+  - Real: `/api/public/market`
+  - Demo: `/api/public/market?demoMode=true`
+- Auto refresh: `Off / 10s / 30s / 60s`
+- Market mood summary and companion message
 - Search by `symbol` or `displayName`
 - Sort by `price`, `changePercent`, or `volume`
 - Filter by market: `ALL / TWSE / OKX`
@@ -59,14 +64,31 @@ Supported actions:
 
 - Add TWSE symbols, for example `2330`
 - Add OKX instruments, for example `BTC-USDT`
+- Prevent duplicate `market + symbol` entries
+- Validate blank input and symbol format before adding
+- Show add success / failure messages
 - Delete items
 - Enable or disable items
 - Move items up or down
 - Mark `syncToDevice`
+- Reset watchlist to defaults
+- Display the full device query URL, for example `http://localhost:3000/api/device/market?symbols=TWSE:2330,OKX:BTC-USDT`
 - Validate TWSE via `/api/provider/twse`
 - Validate OKX instruments via `/api/provider/okx/instruments`
 
 No database is used in this phase.
+
+## Companion Mode
+
+`/dashboard/companion` stores a local companion voice setting in `localStorage`.
+
+Supported modes:
+
+- `normal`
+- `flirt`
+- `quiet`
+
+Messages are generated from `MarketStatus`. The flirt mode is intentionally light, playful, and non-explicit.
 
 ## Single Market Item
 
@@ -111,6 +133,12 @@ Public Market:
 http://localhost:3000/api/public/market
 ```
 
+Public Market demo mode:
+
+```text
+http://localhost:3000/api/public/market?demoMode=true
+```
+
 Device Market default list:
 
 ```text
@@ -123,11 +151,41 @@ Device Market with explicit symbols:
 http://localhost:3000/api/device/market?symbols=TWSE:2330,TWSE:2317,OKX:BTC-USDT
 ```
 
+Device Config:
+
+```text
+http://localhost:3000/api/device/config
+```
+
+Device Heartbeat:
+
+```text
+POST http://localhost:3000/api/device/heartbeat
+```
+
+Device Event:
+
+```text
+POST http://localhost:3000/api/device/event
+```
+
 Dashboard API Debug:
 
 ```text
 http://localhost:3000/dashboard/api-debug
 ```
+
+## Storage and Cache Limits
+
+Current persistence is intentionally lightweight:
+
+- Watchlist settings, market page settings, and companion mode are stored in browser `localStorage`.
+- `localStorage` is per browser and per device. It is not shared across users, browsers, or machines.
+- Market fallback cache is in memory only.
+- In-memory cache is lost when the Next.js server restarts or redeploys.
+- There is still no Prisma / SQLite persistence in this phase.
+- There is still no login or account system in this phase.
+- ESP32 Arduino firmware is still out of scope; device routes are mock HTTP endpoints for integration testing.
 
 ## Scope
 

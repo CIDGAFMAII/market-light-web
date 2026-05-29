@@ -21,6 +21,8 @@ type TestPanelProps = {
   title: string;
   endpoint: string;
   buttonLabel: string;
+  method?: "GET" | "POST";
+  body?: unknown;
   children?: ReactNode;
 };
 
@@ -79,18 +81,37 @@ export function ApiDebugClient() {
 
       <TestPanel title="Public Market 測試" buttonLabel="Fetch Public Market" endpoint="/api/public/market" />
       <TestPanel title="Device Market 測試" buttonLabel="Fetch Device Market" endpoint="/api/device/market" />
+      <TestPanel title="Device Config 測試" buttonLabel="Fetch Device Config" endpoint="/api/device/config" />
+      <TestPanel
+        title="Device Heartbeat 測試"
+        buttonLabel="POST Heartbeat"
+        endpoint="/api/device/heartbeat"
+        method="POST"
+        body={{ deviceId: "ML-ESP32-8F2A", battery: 92, rssi: -48 }}
+      />
+      <TestPanel
+        title="Device Event 測試"
+        buttonLabel="POST Event"
+        endpoint="/api/device/event"
+        method="POST"
+        body={{ deviceId: "ML-ESP32-8F2A", type: "button_press", value: "next" }}
+      />
     </div>
   );
 }
 
-function TestPanel({ title, endpoint, buttonLabel, children }: TestPanelProps) {
+function TestPanel({ title, endpoint, buttonLabel, method = "GET", body, children }: TestPanelProps) {
   const [state, setState] = useState<ResultState>(emptyState);
 
   async function run() {
     setState({ loading: true, error: "", json: null });
 
     try {
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        method,
+        headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
+        body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
+      });
       const json = await response.json();
       setState({ loading: false, error: "", json });
     } catch (error) {
@@ -116,8 +137,13 @@ function TestPanel({ title, endpoint, buttonLabel, children }: TestPanelProps) {
         </button>
       </div>
       <div className="mt-3 break-all rounded border border-white/10 bg-black/35 px-3 py-2 text-xs text-muted">
-        {endpoint}
+        {method} {endpoint}
       </div>
+      {method === "POST" ? (
+        <pre className="mt-3 max-h-40 overflow-auto rounded border border-white/10 bg-black/35 p-3 text-xs leading-5 text-muted">
+          {JSON.stringify(body ?? {}, null, 2)}
+        </pre>
+      ) : null}
       {state.error ? <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-red-300">{state.error}</div> : null}
       {state.json ? (
         <div className="mt-4">
