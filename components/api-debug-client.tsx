@@ -55,9 +55,9 @@ export function ApiDebugClient() {
         endpoint={`/api/provider/okx/ticker?instId=${encodeURIComponent(tickerInstId)}`}
         previewEnabled
       >
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-400">
           instId
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={tickerInstId} onChange={(event) => setTickerInstId(event.target.value)} />
+          <input className="field" value={tickerInstId} onChange={(event) => setTickerInstId(event.target.value)} />
         </label>
       </TestPanel>
 
@@ -66,13 +66,13 @@ export function ApiDebugClient() {
         buttonLabel="Fetch Instruments"
         endpoint={`/api/provider/okx/instruments?instType=${encodeURIComponent(instType)}${instrumentInstId ? `&instId=${encodeURIComponent(instrumentInstId)}` : ""}`}
       >
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-400">
           instType
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={instType} onChange={(event) => setInstType(event.target.value)} />
+          <input className="field" value={instType} onChange={(event) => setInstType(event.target.value)} />
         </label>
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-400">
           instId 選填
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={instrumentInstId} onChange={(event) => setInstrumentInstId(event.target.value)} />
+          <input className="field" value={instrumentInstId} onChange={(event) => setInstrumentInstId(event.target.value)} />
         </label>
       </TestPanel>
 
@@ -82,18 +82,18 @@ export function ApiDebugClient() {
         endpoint={`/api/provider/twse?symbol=${encodeURIComponent(twseSymbol)}&exchange=${encodeURIComponent(twseExchange)}`}
         previewEnabled
       >
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-400">
           股票代號
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={twseSymbol} onChange={(event) => setTwseSymbol(event.target.value)} />
+          <input className="field" value={twseSymbol} onChange={(event) => setTwseSymbol(event.target.value)} />
         </label>
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-400">
           交易所
-          <select className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={twseExchange} onChange={(event) => setTwseExchange(event.target.value)}>
+          <select className="field" value={twseExchange} onChange={(event) => setTwseExchange(event.target.value)}>
             <option value="tse">tse</option>
             <option value="otc">otc</option>
           </select>
         </label>
-        <div className="rounded border border-yellow-400/30 bg-yellow/10 p-3 text-xs leading-5 text-yellow md:col-span-2">
+        <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-200 md:col-span-2">
           Legacy / Experimental：競賽主流程不依賴台股即時資料。台股目前以 Demo 展示資料呈現同步與提醒流程。
         </div>
       </TestPanel>
@@ -104,11 +104,11 @@ export function ApiDebugClient() {
         endpoint={`/api/provider/finmind/daily?symbol=${encodeURIComponent(finMindSymbol)}&debug=true`}
         previewEnabled
       >
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-400">
           股票代號
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={finMindSymbol} onChange={(event) => setFinMindSymbol(event.target.value)} />
+          <input className="field" value={finMindSymbol} onChange={(event) => setFinMindSymbol(event.target.value)} />
         </label>
-        <div className="rounded border border-blue-400/30 bg-blue-400/10 p-3 text-xs leading-5 text-blue-200">
+        <div className="rounded-xl border border-indigo-400/25 bg-indigo-500/10 p-3 text-xs leading-5 text-indigo-200">
           Legacy / Experimental：FinMind daily 不是逐筆即時價格；本版台股正式展示採 Demo 資料。
         </div>
       </TestPanel>
@@ -175,28 +175,28 @@ export function ApiDebugClient() {
               <>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <StatusBadge status={selectedPreviewItem.status} />
-                  <span className="rounded border border-cyan/35 px-2 py-1 text-xs uppercase tracking-[0.16em] text-cyan">
+                  <span className="badge border-indigo-400/30 bg-indigo-500/10 text-indigo-200">
                     {selectedPreviewItem.source}
                   </span>
                   {selectedPreviewItem.source === "DEMO" ? (
-                    <span className="rounded border border-gray-500/40 px-2 py-1 text-xs uppercase tracking-[0.16em] text-muted">DEMO</span>
+                    <span className="badge">DEMO</span>
                   ) : null}
                   {selectedPreviewItem.stale ? (
-                    <span className="rounded border border-yellow-400/40 px-2 py-1 text-xs uppercase tracking-[0.16em] text-yellow">STALE</span>
+                    <span className="badge border-amber-400/30 bg-amber-400/10 text-amber-200">STALE</span>
                   ) : null}
                 </div>
-                <div className="rounded border border-white/10 bg-black/35 p-4 text-sm leading-6 text-muted">
-                  <div className="font-orbitron text-lg text-white">{selectedPreviewItem.symbol} {selectedPreviewItem.displayName}</div>
+                <div className="soft-card p-4 text-sm leading-6 text-slate-400">
+                  <div className="font-mono text-lg font-bold text-slate-50">{selectedPreviewItem.symbol} {selectedPreviewItem.displayName}</div>
                   <div>price：{selectedPreviewItem.price.toLocaleString()}</div>
                   <div>changePercent：{selectedPreviewItem.changePercent.toFixed(2)}%</div>
                   <div>tradeTime：{selectedPreviewItem.tradeTime}</div>
                 </div>
               </>
             ) : (
-              <div className="rounded border border-white/10 bg-black/35 p-4 text-muted">尚無可預覽資料</div>
+              <div className="soft-card p-4 text-slate-300">尚無可預覽資料</div>
             )}
             {previewWarnings.length > 0 ? (
-              <div className="mt-3 rounded border border-yellow-400/35 bg-yellow/10 p-3 text-sm text-yellow">
+              <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">
                 {previewWarnings.join("；")}
               </div>
             ) : null}
@@ -250,26 +250,26 @@ function TestPanel({ title, endpoint, buttonLabel, method = "GET", body, preview
           type="button"
           onClick={run}
           disabled={state.loading}
-          className="rounded border border-[var(--border-cyan)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-cyan transition hover:bg-cyan/10 disabled:cursor-wait disabled:opacity-60"
+          className="btn-primary disabled:cursor-wait"
         >
           {state.loading ? "讀取中" : buttonLabel}
         </button>
       </div>
-      <div className="mt-3 break-all rounded border border-white/10 bg-black/35 px-3 py-2 text-xs text-muted">
+      <div className="mt-3 break-all rounded-xl border border-slate-700/70 bg-slate-950/80 px-3 py-2 font-mono text-xs text-slate-300">
         {method} {endpoint}
       </div>
       {method === "POST" ? (
-        <pre className="mt-3 max-h-40 overflow-auto rounded border border-white/10 bg-black/35 p-3 text-xs leading-5 text-muted">
+        <pre className="mt-3 max-h-40 overflow-auto rounded-xl border border-slate-700/70 bg-slate-950/80 p-3 text-xs leading-5 text-slate-300">
           {JSON.stringify(body ?? {}, null, 2)}
         </pre>
       ) : null}
-      {state.error ? <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-red-300">{state.error}</div> : null}
+      {state.error ? <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-200">{state.error}</div> : null}
       {state.json ? (
         <div className="mt-4">
           <div className="mb-3 flex justify-end">
             <CopyJsonButton value={state.json} />
           </div>
-          <pre className="max-h-96 overflow-auto rounded border border-cyan/10 bg-black/45 p-4 text-sm leading-6 text-green-300">
+          <pre className="code-block max-h-96">
             {JSON.stringify(state.json, null, 2)}
           </pre>
         </div>

@@ -7,11 +7,11 @@ import { TerminalPanel } from "@/components/terminal-panel";
 export default function DashboardPage() {
   return (
     <div>
-      <div className="mb-8 flex flex-col gap-4 border-b border-cyan/15 pb-5 md:flex-row md:items-end md:justify-between">
+      <div className="page-header">
         <div>
-          <Link href="/" className="text-sm uppercase tracking-[0.18em] text-cyan">← 首頁</Link>
-          <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">控制台</h1>
-          <p className="mt-3 text-muted">第一階段的模擬控制介面，目前刻意不啟用登入與資料庫。</p>
+          <Link href="/" className="back-link">← 首頁</Link>
+          <h1 className="page-title">控制台</h1>
+          <p className="page-copy">第一階段的模擬控制介面，目前刻意不啟用登入與資料庫。</p>
         </div>
         <StatusBadge status="calm" />
       </div>
@@ -33,7 +33,7 @@ export default function DashboardPage() {
         </TerminalPanel>
 
         <TerminalPanel title="API 偵錯" label="PING" className="xl:col-span-2">
-          <pre className="overflow-x-auto rounded border border-cyan/10 bg-black/45 p-4 text-sm leading-6 text-green-300">
+          <pre className="code-block">
             {JSON.stringify(
               {
                 phase: 1,

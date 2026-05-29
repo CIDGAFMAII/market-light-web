@@ -7,15 +7,15 @@ type CyberCardProps = {
 };
 
 const toneMap = {
-  cyan: "border-[var(--border-cyan)] shadow-cyan",
-  pink: "border-[var(--border-pink)] shadow-pink",
-  yellow: "border-[var(--border-yellow)] shadow-yellow",
+  cyan: "hover:border-indigo-400/35",
+  pink: "hover:border-violet-400/35",
+  yellow: "hover:border-amber-300/35",
 };
 
 export function CyberCard({ children, className = "", tone = "cyan" }: CyberCardProps) {
   return (
     <section
-      className={`rounded-lg border bg-[rgba(12,15,20,0.82)] backdrop-blur-sm ${toneMap[tone]} ${className}`}
+      className={`surface-card transition duration-200 ${toneMap[tone]} ${className}`}
     >
       {children}
     </section>

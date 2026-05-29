@@ -11,11 +11,11 @@ type TerminalPanelProps = {
 export function TerminalPanel({ title, label = "SYS", children, className = "" }: TerminalPanelProps) {
   return (
     <CyberCard className={`p-5 ${className}`}>
-      <div className="mb-4 flex items-center justify-between gap-4 border-b border-[rgba(0,255,255,0.16)] pb-3">
-        <h2 className="font-orbitron text-sm font-bold uppercase tracking-[0.22em] text-cyan">
+      <div className="mb-4 flex items-center justify-between gap-4 border-b border-slate-700/65 pb-3">
+        <h2 className="text-base font-bold tracking-tight text-slate-50">
           {title}
         </h2>
-        <span className="rounded border border-[var(--border-pink)] px-2 py-1 text-xs uppercase text-pink">
+        <span className="rounded-full border border-indigo-400/25 bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-200">
           {label}
         </span>
       </div>

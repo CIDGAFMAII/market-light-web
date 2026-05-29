@@ -53,24 +53,24 @@ export default async function MarketDetailPage({ params }: PageProps) {
   };
 
   return (
-    <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-4 border-b border-cyan/15 pb-5 md:flex-row md:items-end md:justify-between">
+    <main className="page-shell">
+      <div className="page-container">
+        <div className="page-header">
           <div>
-            <Link href="/market" className="text-sm uppercase tracking-[0.18em] text-cyan">← 市場看盤</Link>
-            <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">{item.symbol}</h1>
-            <p className="mt-3 text-muted">{item.displayName} / {item.market}</p>
+            <Link href="/market" className="back-link">← 市場看盤</Link>
+            <h1 className="page-title font-mono">{item.symbol}</h1>
+            <p className="page-copy">{item.displayName} / {item.market}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded border border-cyan/30 px-3 py-2 text-cyan">{item.source}</span>
-            {item.quoteQuality ? <span className="rounded border border-white/15 px-3 py-2 text-muted">{item.quoteQuality.toUpperCase()}</span> : null}
-            {item.stale ? <span className="rounded border border-yellow-400/40 px-3 py-2 text-yellow">STALE</span> : null}
+            <span className="badge border-indigo-400/30 bg-indigo-500/10 text-indigo-200">{item.source}</span>
+            {item.quoteQuality ? <span className="badge">{item.quoteQuality.toUpperCase()}</span> : null}
+            {item.stale ? <span className="badge border-amber-400/30 bg-amber-400/10 text-amber-200">STALE</span> : null}
             <ColorAwareStatusBadge status={item.status} />
           </div>
         </div>
 
         {result.warnings.length > 0 ? (
-          <div className="mb-5 rounded border border-yellow-400/35 bg-yellow/10 p-3 text-sm text-yellow">
+          <div className="mb-5 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">
             {result.warnings.join("；")}
           </div>
         ) : null}
@@ -103,7 +103,7 @@ export default async function MarketDetailPage({ params }: PageProps) {
             <div className="mb-3 flex justify-end">
               <CopyJsonButton value={esp32Payload} />
             </div>
-            <pre className="overflow-x-auto rounded border border-cyan/10 bg-black/45 p-4 text-sm leading-6 text-green-300">
+            <pre className="code-block">
               {JSON.stringify(esp32Payload, null, 2)}
             </pre>
           </TerminalPanel>
@@ -115,9 +115,9 @@ export default async function MarketDetailPage({ params }: PageProps) {
 
 function DataLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-cyan/10 bg-black/25 p-3">
-      <div className="text-xs uppercase tracking-[0.18em] text-muted">{label}</div>
-      <div className="mt-2 font-mono text-cyan">{value}</div>
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+      <div className="text-xs font-semibold text-slate-300">{label}</div>
+      <div className="mt-2 font-mono text-indigo-200">{value}</div>
     </div>
   );
 }

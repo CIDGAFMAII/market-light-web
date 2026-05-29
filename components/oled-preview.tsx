@@ -12,11 +12,11 @@ export type OLEDPreviewProps = {
 };
 
 const toneClass = {
-  red: "text-red-300 shadow-[0_0_32px_rgba(239,68,68,0.2)]",
-  green: "text-green-300 shadow-[0_0_32px_rgba(34,197,94,0.2)]",
-  yellow: "text-yellow shadow-yellow",
-  muted: "text-muted",
-  cyan: "text-cyan shadow-cyan",
+  red: "text-red-200",
+  green: "text-emerald-200",
+  yellow: "text-amber-200",
+  muted: "text-slate-300",
+  cyan: "text-indigo-200",
 };
 
 export function OLEDPreview({ line1, line2, line3, line4, status = "calm", colorMode }: OLEDPreviewProps) {
@@ -24,9 +24,9 @@ export function OLEDPreview({ line1, line2, line3, line4, status = "calm", color
   const lines = [line1, line2, line3, line4];
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-[#050608] p-3 shadow-[inset_0_0_16px_rgba(255,255,255,0.04)]">
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-950 p-3 shadow-[inset_0_0_20px_rgba(15,23,42,0.7)]">
       <div
-        className={`oled-scanline aspect-[2/1] rounded-md border border-cyan/25 bg-black px-5 py-4 font-mono ${toneClass[tone]}`}
+        className={`oled-scanline aspect-[2/1] rounded-xl border border-indigo-400/20 bg-[#030712] px-5 py-4 font-mono ${toneClass[tone]}`}
       >
         <div className="flex h-full flex-col justify-between text-[clamp(0.82rem,2vw,1.12rem)] leading-none">
           {lines.map((line) => (
@@ -36,7 +36,7 @@ export function OLEDPreview({ line1, line2, line3, line4, status = "calm", color
           ))}
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-muted">
+      <div className="mt-2 flex items-center justify-between text-[10px] font-semibold text-slate-300">
         <span>128x64 OLED</span>
         <span>I2C 模擬</span>
       </div>

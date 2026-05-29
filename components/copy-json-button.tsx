@@ -19,7 +19,7 @@ export function CopyJsonButton({ value }: CopyJsonButtonProps) {
     <button
       type="button"
       onClick={copy}
-      className="rounded border border-[var(--border-cyan)] px-3 py-2 text-sm uppercase tracking-[0.16em] text-cyan transition hover:bg-cyan/10"
+      className="btn-secondary"
     >
       {copied ? "已複製" : "複製 JSON"}
     </button>

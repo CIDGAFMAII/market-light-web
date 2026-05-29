@@ -73,14 +73,14 @@ export default function DemoPage() {
   );
 
   return (
-    <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-4 border-b border-cyan/15 pb-5 md:flex-row md:items-end md:justify-between">
+    <main className="page-shell">
+      <div className="page-container">
+        <div className="page-header">
           <div>
-            <Link href="/" className="text-sm uppercase tracking-[0.18em] text-cyan">← 首頁</Link>
-            <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">裝置展示模式</h1>
-            <p className="mt-3 text-muted">競賽展示用：OLED、RGB、小助手、fallback 與 ESP32 API 資料流集中在這裡。</p>
-            <p className="mt-2 text-sm text-yellow">台股畫面為展示資料，重點是呈現 ESP32 同步與提醒流程。</p>
+            <Link href="/" className="back-link">← 首頁</Link>
+            <h1 className="page-title">裝置展示模式</h1>
+            <p className="page-copy">競賽展示用：OLED、RGB、小助手、fallback 與 ESP32 API 資料流集中在這裡。</p>
+            <p className="mt-2 text-sm text-amber-200">台股畫面為展示資料，重點是呈現 ESP32 同步與提醒流程。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <PriceColorModeToggle mode={priceColorMode} onChange={setPriceColorMode} />
@@ -91,15 +91,15 @@ export default function DemoPage() {
         <section className="grid gap-5 lg:grid-cols-[1fr_0.85fr_1fr]">
           <TerminalPanel title="OLED 模擬器" label="128x64">
             <OLEDPreview line1={data.line1} line2={data.line2} line3={data.line3} line4={data.line4} status={status} colorMode={priceColorMode} />
-            <div className="mt-4 text-sm leading-7 text-muted">{data.note}</div>
+            <div className="mt-4 text-sm leading-7 text-slate-300">{data.note}</div>
             <div className="mt-3 flex flex-wrap gap-2">
               {(status === "error" || status === "closed") ? (
                 <>
-                  <span className="rounded border border-gray-500/40 px-2 py-1 text-xs text-muted">DEMO</span>
-                  <span className="rounded border border-yellow-400/40 px-2 py-1 text-xs text-yellow">STALE</span>
+                  <span className="badge">DEMO</span>
+                  <span className="badge border-amber-400/30 bg-amber-400/10 text-amber-200">STALE</span>
                 </>
               ) : (
-                <span className="rounded border border-cyan/40 px-2 py-1 text-xs text-cyan">REAL</span>
+                <span className="badge border-indigo-400/30 bg-indigo-500/10 text-indigo-200">REAL</span>
               )}
             </div>
           </TerminalPanel>
@@ -109,7 +109,7 @@ export default function DemoPage() {
             <div className="mt-5">
               <PetFace status={status} name="Miko" size="md" colorMode={priceColorMode} />
             </div>
-            <div className="mt-4 rounded border border-white/10 bg-black/30 p-3 text-sm leading-6 text-white">
+            <div className="mt-4 rounded-xl border border-slate-700/70 bg-slate-900/80 p-3 text-sm leading-6 text-slate-100">
               {companionMessage(status, companionMode)}
             </div>
           </TerminalPanel>
@@ -121,10 +121,10 @@ export default function DemoPage() {
                   key={item}
                   type="button"
                   onClick={() => setStatus(item)}
-                  className={`rounded border px-3 py-2 text-sm uppercase tracking-[0.14em] transition ${
+                    className={`btn-secondary justify-center ${
                     status === item
-                      ? "border-[var(--border-cyan)] bg-cyan/15 text-cyan"
-                      : "border-white/10 bg-black/25 text-muted hover:border-[var(--border-pink)] hover:text-pink"
+                      ? "border-indigo-400/45 bg-indigo-500/15 text-indigo-100"
+                      : ""
                   }`}
                 >
                   {statusButtonLabels[item]}
@@ -137,10 +137,10 @@ export default function DemoPage() {
                   key={mode}
                   type="button"
                   onClick={() => setCompanionMode(mode)}
-                  className={`rounded border px-3 py-2 text-xs uppercase tracking-[0.14em] transition ${
+                  className={`btn-secondary justify-center ${
                     companionMode === mode
-                      ? "border-[var(--border-pink)] bg-pink/10 text-pink"
-                      : "border-white/10 bg-black/25 text-muted hover:border-pink/40 hover:text-pink"
+                      ? "border-violet-400/45 bg-violet-500/15 text-violet-100"
+                      : ""
                   }`}
                 >
                   {mode}
@@ -149,27 +149,27 @@ export default function DemoPage() {
             </div>
             <div className="mt-5 grid gap-2">
               <CopyJsonButton value={json} />
-              <button className="rounded border border-white/10 px-3 py-2 text-sm uppercase tracking-[0.16em] text-muted hover:border-cyan/40 hover:text-cyan" type="button" onClick={() => setStatus("up_alert")}>重設展示</button>
-              <button className="rounded border border-yellow-400/35 px-3 py-2 text-sm uppercase tracking-[0.16em] text-yellow hover:bg-yellow/10" type="button" onClick={() => setStatus("error")}>模擬 API 異常</button>
-              <button className="rounded border border-white/10 px-3 py-2 text-sm uppercase tracking-[0.16em] text-muted hover:border-cyan/40 hover:text-cyan" type="button" onClick={() => setStatus("closed")}>模擬 TWSE 休市</button>
-              <button className="rounded border border-white/10 px-3 py-2 text-sm uppercase tracking-[0.16em] text-muted hover:border-cyan/40 hover:text-cyan" type="button" onClick={() => setStatus("quiet")}>模擬安靜模式</button>
+              <button className="btn-secondary" type="button" onClick={() => setStatus("up_alert")}>重設展示</button>
+              <button className="btn-secondary border-amber-400/35 bg-amber-400/10 text-amber-100" type="button" onClick={() => setStatus("error")}>模擬 API 異常</button>
+              <button className="btn-secondary" type="button" onClick={() => setStatus("closed")}>模擬 TWSE 休市</button>
+              <button className="btn-secondary" type="button" onClick={() => setStatus("quiet")}>模擬安靜模式</button>
             </div>
           </TerminalPanel>
         </section>
 
         <section className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
           <TerminalPanel title="Fallback 情境" label="SOURCE">
-            <div className="space-y-3 text-sm leading-6 text-muted">
-              <div className="rounded border border-white/10 bg-black/30 p-3">
-                真實資料：顯示 <span className="text-cyan">TWSE</span> / <span className="text-pink">OKX</span>
+            <div className="space-y-3 text-sm leading-6 text-slate-300">
+              <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+                真實資料：顯示 <span className="text-indigo-200">TWSE</span> / <span className="text-violet-200">OKX</span>
               </div>
-              <div className="rounded border border-white/10 bg-black/30 p-3">
-                fallback：顯示 <span className="text-muted">DEMO</span> 或 <span className="text-yellow">CACHE</span>，並標記 <span className="text-yellow">STALE</span>
+              <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+                fallback：顯示 <span className="text-slate-300">DEMO</span> 或 <span className="text-amber-200">CACHE</span>，並標記 <span className="text-amber-200">STALE</span>
               </div>
               <button
                 type="button"
                 onClick={() => setStatus("error")}
-                className="rounded border border-yellow-400/35 px-3 py-2 text-sm uppercase tracking-[0.16em] text-yellow hover:bg-yellow/10"
+                className="btn-secondary border-amber-400/35 bg-amber-400/10 text-amber-100"
               >
                 模擬 fallback warning
               </button>
@@ -178,20 +178,20 @@ export default function DemoPage() {
 
           <TerminalPanel title="Device API Demo" label="ESP32">
             <div className="space-y-3 text-sm">
-              <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-cyan">
+              <div className="break-all rounded-xl border border-slate-700/70 bg-slate-900/80 p-3 font-mono text-indigo-100">
                 /api/device/config?deviceId={deviceId}
               </div>
-              <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-cyan">
+              <div className="break-all rounded-xl border border-slate-700/70 bg-slate-900/80 p-3 font-mono text-indigo-100">
                 /api/device/market?deviceId={deviceId}
               </div>
-              <div className="text-muted">ESP32 firmware 可固定讀取這兩條 URL，資產清單由 /watchlist 儲存到 server-side device config。</div>
+              <div className="text-slate-300">ESP32 firmware 可固定讀取這兩條 URL，資產清單由 /watchlist 儲存到 server-side device config。</div>
             </div>
           </TerminalPanel>
         </section>
 
         <section className="mt-5">
           <TerminalPanel title="ESP32 JSON Preview" label="資料包">
-            <pre className="overflow-x-auto rounded border border-cyan/10 bg-black/45 p-4 text-sm leading-6 text-green-300">
+            <pre className="code-block">
               {JSON.stringify(json, null, 2)}
             </pre>
           </TerminalPanel>

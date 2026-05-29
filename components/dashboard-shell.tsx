@@ -10,7 +10,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <DashboardPreviewProvider>
           <Sidebar />
           <main className="p-5 lg:p-8">{children}</main>
-          <aside className="border-l border-cyan/15 bg-black/25 p-5 lg:p-6">
+          <aside className="border-l border-slate-700/60 bg-slate-950/70 p-5 lg:p-6">
             <DeviceCard />
           </aside>
         </DashboardPreviewProvider>

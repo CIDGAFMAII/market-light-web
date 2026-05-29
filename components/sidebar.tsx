@@ -12,8 +12,8 @@ const items = [
 
 export function Sidebar() {
   return (
-    <aside className="border-r border-cyan/15 bg-black/35 p-4">
-      <Link href="/" className="block font-orbitron text-lg font-bold uppercase tracking-[0.18em] text-cyan">
+    <aside className="border-r border-slate-700/60 bg-slate-950/75 p-4">
+      <Link href="/" className="brand-mark block">
         Market Light
       </Link>
       <nav className="mt-8 space-y-2">
@@ -21,7 +21,7 @@ export function Sidebar() {
           <Link
             key={item.label}
             href={item.href}
-            className="block rounded border border-transparent px-3 py-2 text-sm uppercase tracking-[0.14em] text-muted transition hover:border-[var(--border-cyan)] hover:text-cyan"
+            className="block rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-slate-700 hover:bg-slate-900/80 hover:text-slate-50"
           >
             {item.label}
           </Link>

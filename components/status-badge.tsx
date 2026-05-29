@@ -8,11 +8,11 @@ type StatusBadgeProps = {
 };
 
 const classes = {
-  red: "border-red-500/45 bg-red-500/10 text-red-300",
-  green: "border-green-500/45 bg-green-500/10 text-green-300",
-  yellow: "border-yellow-400/45 bg-yellow-400/10 text-yellow",
-  muted: "border-gray-500/45 bg-gray-500/10 text-muted",
-  cyan: "border-cyan/45 bg-cyan/10 text-cyan",
+  red: "border-red-500/30 bg-red-500/10 text-red-200",
+  green: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+  yellow: "border-amber-400/30 bg-amber-400/10 text-amber-200",
+  muted: "border-slate-600/70 bg-slate-800/75 text-slate-200",
+  cyan: "border-indigo-400/30 bg-indigo-500/10 text-indigo-200",
 };
 
 export function StatusBadge({ status, className = "", colorMode }: StatusBadgeProps) {
@@ -20,7 +20,7 @@ export function StatusBadge({ status, className = "", colorMode }: StatusBadgePr
 
   return (
     <span
-      className={`inline-flex items-center rounded border px-2 py-1 text-xs uppercase tracking-[0.18em] ${classes[tone]} ${className}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${classes[tone]} ${className}`}
     >
       {statusLabels[status]}
     </span>

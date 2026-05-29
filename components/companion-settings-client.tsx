@@ -35,14 +35,14 @@ export function CompanionSettingsClient() {
               key={item}
               type="button"
               onClick={() => updateMode(item)}
-              className={`rounded border px-4 py-3 text-left transition ${
+              className={`rounded-xl border px-4 py-3 text-left transition duration-200 hover:-translate-y-0.5 ${
                 mode === item
-                  ? "border-[var(--border-cyan)] bg-cyan/10 text-cyan"
-                  : "border-white/10 text-muted hover:border-cyan/40 hover:text-cyan"
+                  ? "border-indigo-400/45 bg-indigo-500/15 text-indigo-100 shadow-indigo"
+                  : "border-slate-700/70 bg-slate-950/75 text-slate-300 hover:border-slate-500 hover:bg-slate-900/90 hover:text-slate-50"
               }`}
             >
-              <span className="block font-orbitron text-sm uppercase tracking-[0.16em]">{item}</span>
-              <span className="mt-2 block text-xs">
+              <span className="block text-sm font-semibold capitalize">{item}</span>
+              <span className="mt-2 block text-xs leading-5">
                 {item === "normal" ? "清楚、穩定的市場提醒" : item === "flirt" ? "有點撩、有趣、舒壓" : "低干擾、少說話"}
               </span>
             </button>
@@ -52,8 +52,8 @@ export function CompanionSettingsClient() {
 
       <TerminalPanel title="Message Preview" label="LOCAL">
         <div className="grid gap-5 lg:grid-cols-[260px_1fr] lg:items-center">
-          <div className="rounded-lg border border-cyan/20 bg-black/45 p-6 text-center">
-            <div className="font-mono text-5xl text-cyan">{petFaces[status]}</div>
+          <div className="soft-card p-6 text-center">
+            <div className="font-mono text-5xl text-indigo-200">{petFaces[status]}</div>
             <div className="mt-4 flex justify-center">
               <StatusBadge status={status} />
             </div>
@@ -62,7 +62,7 @@ export function CompanionSettingsClient() {
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value as MarketStatus)}
-              className="w-full rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan"
+              className="field w-full"
             >
               {statuses.map((item) => (
                 <option key={item} value={item}>
@@ -70,7 +70,7 @@ export function CompanionSettingsClient() {
                 </option>
               ))}
             </select>
-            <div className="mt-4 rounded border border-white/10 bg-black/35 p-4 text-lg text-white">
+            <div className="mt-4 rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 text-lg font-medium text-slate-100">
               {message}
             </div>
           </div>

@@ -42,9 +42,9 @@ export function StocksSettingsClient() {
     json.items[0]?.state === "live";
 
   return (
-    <TerminalPanel title="股票設定測試" label="MOCK">
+    <TerminalPanel title="資料檢查" label="TOOLS">
       <div className="grid gap-4 md:grid-cols-3">
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-300">
           市場
           <select
             value={market}
@@ -53,26 +53,26 @@ export function StocksSettingsClient() {
               setMarket(next);
               setSymbol(next === "OKX" ? "BTC-USDT" : "2330");
             }}
-            className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan"
+            className="field"
           >
             <option value="OKX">OKX</option>
             <option value="TWSE">TWSE</option>
           </select>
         </label>
-        <label className="grid gap-2 text-sm text-muted">
+        <label className="grid gap-2 text-sm font-medium text-slate-300">
           {market === "OKX" ? "instId" : "股票代號"}
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={symbol} onChange={(event) => setSymbol(event.target.value)} />
+          <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value)} />
         </label>
         {market === "TWSE" ? (
-          <label className="grid gap-2 text-sm text-muted">
+          <label className="grid gap-2 text-sm font-medium text-slate-300">
             交易所
-            <select className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={exchange} onChange={(event) => setExchange(event.target.value)}>
+            <select className="field" value={exchange} onChange={(event) => setExchange(event.target.value)}>
               <option value="tse">tse</option>
               <option value="otc">otc</option>
             </select>
           </label>
         ) : (
-          <div className="rounded border border-cyan/10 bg-black/25 p-3 text-sm text-muted">
+          <div className="soft-card p-3 text-sm text-slate-400">
             OKX symbol 使用 instId 格式，例如 BTC-USDT。
           </div>
         )}
@@ -83,23 +83,23 @@ export function StocksSettingsClient() {
           type="button"
           onClick={validate}
           disabled={loading}
-          className="rounded border border-[var(--border-cyan)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-cyan transition hover:bg-cyan/10 disabled:cursor-wait disabled:opacity-60"
+          className="btn-primary disabled:cursor-wait disabled:opacity-60"
         >
           {loading ? "驗證中" : market === "OKX" ? "Validate OKX Instrument" : "Test TWSE"}
         </button>
-        {okxLive ? <span className="rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-300">Valid / Live</span> : null}
+        {okxLive ? <span className="badge border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-emerald-200">Valid / Live</span> : null}
       </div>
 
-      <div className="mt-3 break-all rounded border border-white/10 bg-black/35 px-3 py-2 text-xs text-muted">
+      <div className="mt-3 break-all rounded-lg border border-slate-700/70 bg-slate-950/80 px-3 py-2 font-mono text-xs text-slate-300">
         {endpoint}
       </div>
-      {error ? <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-red-300">{error}</div> : null}
+      {error ? <div className="mt-3 rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-red-200">{error}</div> : null}
       {json ? (
         <div className="mt-4">
           <div className="mb-3 flex justify-end">
             <CopyJsonButton value={json} />
           </div>
-          <pre className="max-h-96 overflow-auto rounded border border-cyan/10 bg-black/45 p-4 text-sm leading-6 text-green-300">
+          <pre className="code-block max-h-96 overflow-auto">
             {JSON.stringify(json, null, 2)}
           </pre>
         </div>

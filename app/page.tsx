@@ -11,28 +11,28 @@ export default function Home() {
   const preview = demoStates.up_alert;
 
   return (
-    <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between border-b border-cyan/15 pb-5">
-        <Link href="/" className="font-orbitron text-lg font-black uppercase tracking-[0.22em] text-cyan">
+    <main className="page-shell">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between border-b border-slate-700/60 pb-5">
+        <Link href="/" className="brand-mark">
           Market Light
         </Link>
-        <div className="flex flex-wrap justify-end gap-4 text-sm uppercase tracking-[0.16em] text-muted">
-          <Link className="hover:text-cyan" href="/market">市場看盤</Link>
-          <Link className="hover:text-cyan" href="/demo">裝置展示</Link>
-          <Link className="hover:text-cyan" href="/watchlist">自選同步</Link>
-          <Link className="hover:text-cyan" href="/dashboard">控制台</Link>
+        <div className="flex flex-wrap justify-end gap-4 text-sm font-medium text-slate-300">
+          <Link className="transition hover:text-slate-100" href="/market">市場看盤</Link>
+          <Link className="transition hover:text-slate-100" href="/demo">裝置展示</Link>
+          <Link className="transition hover:text-slate-100" href="/watchlist">自選同步</Link>
+          <Link className="transition hover:text-slate-100" href="/dashboard">控制台</Link>
         </div>
       </nav>
 
       <section className="mx-auto grid max-w-7xl gap-8 py-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div>
-          <div className="mb-5 inline-flex rounded border border-[var(--border-yellow)] px-3 py-1 text-xs uppercase tracking-[0.22em] text-yellow">
+          <div className="mb-5 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
             系統在線
           </div>
-          <h1 className="font-orbitron text-5xl font-black uppercase leading-tight text-white md:text-7xl">
-            Market <span className="text-cyan">Light</span>
+          <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-slate-50 md:text-7xl">
+            Market <span className="bg-gradient-to-r from-indigo-300 to-violet-300 bg-clip-text text-transparent">Light</span>
           </h1>
-          <p className="mt-4 font-orbitron text-lg uppercase tracking-[0.24em] text-pink">
+          <p className="mt-4 text-lg font-semibold text-indigo-200">
             低干擾市場提醒裝置
           </p>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
@@ -41,19 +41,19 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
               href="/demo"
-              className="rounded border border-[var(--border-cyan)] bg-cyan/10 px-5 py-3 font-orbitron text-sm uppercase tracking-[0.18em] text-cyan shadow-cyan transition hover:bg-cyan/20"
+              className="btn-primary"
             >
               裝置展示
             </Link>
             <Link
               href="/market"
-              className="rounded border border-[var(--border-pink)] bg-pink/10 px-5 py-3 font-orbitron text-sm uppercase tracking-[0.18em] text-pink shadow-pink transition hover:bg-pink/20"
+              className="btn-secondary"
             >
               市場看盤
             </Link>
             <Link
               href="/watchlist"
-              className="rounded border border-white/10 px-5 py-3 font-orbitron text-sm uppercase tracking-[0.18em] text-muted transition hover:border-cyan/40 hover:text-cyan"
+              className="btn-secondary"
             >
               自選同步
             </Link>
@@ -62,7 +62,7 @@ export default function Home() {
 
         <CyberCard className="p-5" tone="pink">
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs uppercase tracking-[0.22em] text-muted">OLED 裝置預覽</span>
+            <span className="text-sm font-semibold text-slate-300">OLED 裝置預覽</span>
             <StatusBadge status="up_alert" />
           </div>
           <OLEDPreview line1={preview.line1} line2={preview.line2} line3={preview.line3} line4={preview.line4} status="up_alert" />
@@ -80,19 +80,19 @@ export default function Home() {
           ["資料新鮮度", "顯示成交時間、更新秒數和來源，降低資料過期風險。"],
         ].map(([title, body], index) => (
           <CyberCard key={title} className="p-5" tone={index === 1 ? "pink" : index === 2 ? "yellow" : "cyan"}>
-            <h2 className="font-orbitron text-base font-bold uppercase tracking-[0.18em] text-white">{title}</h2>
-            <p className="mt-4 leading-7 text-muted">{body}</p>
+            <h2 className="text-base font-bold text-slate-50">{title}</h2>
+            <p className="mt-4 leading-7 text-slate-300">{body}</p>
           </CyberCard>
         ))}
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-6 py-10 lg:grid-cols-[0.9fr_1.1fr]">
         <TerminalPanel title="裝置資料流" label="路由">
-          <div className="space-y-3 text-center font-orbitron text-sm uppercase tracking-[0.18em]">
+          <div className="space-y-3 text-center text-sm font-semibold">
             {["TWSE / OKX", "Market Light 雲端", "ESP32", "OLED / RGB / 實體按鈕"].map((step, index) => (
               <div key={step}>
-                <div className="rounded border border-cyan/25 bg-black/35 px-4 py-3 text-cyan">{step}</div>
-                {index < 3 ? <div className="py-2 text-pink">↓</div> : null}
+                <div className="rounded-xl border border-slate-600/70 bg-slate-900/85 px-4 py-3 text-slate-100 shadow-[0_10px_24px_rgba(2,6,23,0.28)]">{step}</div>
+                {index < 3 ? <div className="py-2 text-indigo-300">↓</div> : null}
               </div>
             ))}
           </div>
@@ -101,12 +101,12 @@ export default function Home() {
         <TerminalPanel title="展示狀態預覽" label="狀態">
           <div className="grid gap-3 sm:grid-cols-2">
             {(["calm", "up_alert", "down_alert", "error"] as const).map((status) => (
-              <div key={status} className="rounded border border-white/10 bg-black/30 p-4">
+              <div key={status} className="soft-card p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <StatusBadge status={status} />
                   <PetFace status={status} size="sm" />
                 </div>
-                <p className="text-sm text-muted">{demoStates[status].note}</p>
+                <p className="text-sm leading-6 text-slate-300">{demoStates[status].note}</p>
               </div>
             ))}
           </div>

@@ -11,16 +11,16 @@ export function DeviceCard() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-[var(--border-cyan)] bg-black/30 p-4">
+      <div className="soft-card p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-orbitron text-sm uppercase tracking-[0.22em] text-cyan">裝置狀態</h3>
+          <h3 className="text-sm font-semibold text-slate-100">裝置狀態</h3>
           <StatusBadge status={preview.status} />
         </div>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between gap-4"><span className="text-muted">名稱</span><span>{dashboardMock.deviceName}</span></div>
-          <div className="flex justify-between gap-4"><span className="text-muted">綁定</span><span>{dashboardMock.bindStatus}</span></div>
-          <div className="flex justify-between gap-4"><span className="text-muted">代碼</span><span className="text-yellow">{dashboardMock.deviceCode}</span></div>
-          <div className="flex justify-between gap-4"><span className="text-muted">最後連線</span><span>{dashboardMock.lastSeenAt}</span></div>
+          <div className="flex justify-between gap-4"><span className="text-slate-400">名稱</span><span className="text-slate-100">{dashboardMock.deviceName}</span></div>
+          <div className="flex justify-between gap-4"><span className="text-slate-400">綁定</span><span className="text-slate-100">{dashboardMock.bindStatus}</span></div>
+          <div className="flex justify-between gap-4"><span className="text-slate-400">代碼</span><span className="font-mono text-amber-200">{dashboardMock.deviceCode}</span></div>
+          <div className="flex justify-between gap-4"><span className="text-slate-400">最後連線</span><span className="text-slate-100">{dashboardMock.lastSeenAt}</span></div>
         </div>
       </div>
       <OLEDPreview
@@ -31,21 +31,21 @@ export function DeviceCard() {
         status={preview.status}
       />
       {selectedPreviewItem ? (
-        <div className="rounded border border-cyan/10 bg-black/30 p-3 text-xs">
+        <div className="soft-card p-3 text-xs">
           <div className="mb-2 flex flex-wrap gap-2">
-            <span className="rounded border border-cyan/35 px-2 py-1 text-cyan">{selectedPreviewItem.source}</span>
-            {selectedPreviewItem.stale ? <span className="rounded border border-yellow-400/40 px-2 py-1 text-yellow">STALE</span> : null}
-            {selectedPreviewItem.source === "DEMO" ? <span className="rounded border border-gray-500/40 px-2 py-1 text-muted">DEMO</span> : null}
+            <span className="badge border-indigo-400/30 bg-indigo-500/10 text-indigo-200">{selectedPreviewItem.source}</span>
+            {selectedPreviewItem.stale ? <span className="badge border-amber-400/30 bg-amber-500/10 text-amber-200">STALE</span> : null}
+            {selectedPreviewItem.source === "DEMO" ? <span className="badge border-slate-500/30 bg-slate-800 text-slate-300">DEMO</span> : null}
           </div>
-          <div className="text-muted">
+          <div className="text-slate-400">
             {selectedPreviewItem.symbol} / {selectedPreviewItem.displayName} / {selectedPreviewItem.tradeTime}
           </div>
         </div>
       ) : (
-        <div className="rounded border border-white/10 bg-black/30 p-3 text-sm text-muted">尚無可預覽資料</div>
+        <div className="soft-card p-3 text-sm text-slate-400">尚無可預覽資料</div>
       )}
       {previewWarnings.length > 0 ? (
-        <div className="rounded border border-yellow-400/35 bg-yellow/10 p-3 text-xs leading-5 text-yellow">
+        <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 p-3 text-xs leading-5 text-amber-200">
           {previewWarnings.join("；")}
         </div>
       ) : null}

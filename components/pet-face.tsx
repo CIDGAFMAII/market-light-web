@@ -9,11 +9,11 @@ type PetFaceProps = {
 };
 
 const colorMap = {
-  red: "text-red-300 border-red-500/40 shadow-[0_0_28px_rgba(239,68,68,0.18)]",
-  green: "text-green-300 border-green-500/40 shadow-[0_0_28px_rgba(34,197,94,0.18)]",
-  yellow: "text-yellow border-yellow-400/40 shadow-yellow",
-  muted: "text-muted border-gray-500/35",
-  cyan: "text-cyan border-cyan/40 shadow-cyan",
+  red: "text-red-200 border-red-500/25 bg-red-500/10",
+  green: "text-emerald-200 border-emerald-500/25 bg-emerald-500/10",
+  yellow: "text-amber-200 border-amber-400/25 bg-amber-400/10",
+  muted: "text-slate-300 border-slate-600/70 bg-slate-900/70",
+  cyan: "text-indigo-200 border-indigo-400/25 bg-indigo-500/10",
 };
 
 const sizeMap = {
@@ -26,9 +26,9 @@ export function PetFace({ status, name = "PET", size = "md", colorMode }: PetFac
   const tone = colorMode ? getDirectionRgbColor(status, colorMode) : statusTone(status);
 
   return (
-    <div className={`rounded-lg border bg-black/45 text-center ${colorMap[tone]} ${sizeMap[size]}`}>
+    <div className={`rounded-2xl border text-center ${colorMap[tone]} ${sizeMap[size]}`}>
       <div className="font-mono leading-none">{petFaces[status]}</div>
-      <div className="mt-2 text-xs uppercase tracking-[0.22em] text-muted">{name}</div>
+      <div className="mt-2 text-xs font-semibold text-slate-300">{name}</div>
     </div>
   );
 }

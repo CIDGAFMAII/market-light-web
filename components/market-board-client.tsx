@@ -37,18 +37,18 @@ const refreshStorageKey = "market-light-market-refresh-sec-v1";
 const refreshIntervals: RefreshInterval[] = [0, 10, 30, 60];
 
 const sourceClass: Record<MarketSource, string> = {
-  TWSE: "border-cyan/40 text-cyan",
-  OKX: "border-pink/40 text-pink",
-  FINMIND: "border-blue-400/40 text-blue-300",
-  CACHE: "border-yellow/40 text-yellow",
-  DEMO: "border-gray-500/40 text-muted",
+  TWSE: "border-slate-600/60 bg-slate-800/60 text-slate-300",
+  OKX: "border-violet-400/30 bg-violet-500/10 text-violet-200",
+  FINMIND: "border-indigo-400/30 bg-indigo-500/10 text-indigo-200",
+  CACHE: "border-amber-400/30 bg-amber-400/10 text-amber-200",
+  DEMO: "border-slate-600/70 bg-slate-800/75 text-slate-200",
 };
 
 const qualityClass = {
-  latest: "border-green-500/40 text-green-300",
-  partial: "border-yellow-400/40 text-yellow",
-  daily: "border-blue-400/40 text-blue-300",
-  fallback: "border-gray-500/40 text-muted",
+  latest: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+  partial: "border-amber-400/30 bg-amber-400/10 text-amber-200",
+  daily: "border-indigo-400/30 bg-indigo-500/10 text-indigo-200",
+  fallback: "border-slate-600/70 bg-slate-800/75 text-slate-200",
 };
 
 export function MarketBoardClient() {
@@ -63,6 +63,7 @@ export function MarketBoardClient() {
   const [sourceModeSetting, setSourceModeSetting] = useState<SourceModeSetting>("real");
   const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(30);
   const [marketViewMode, setMarketViewMode] = useState<MarketViewMode>("default");
+  const [watchlistCount, setWatchlistCount] = useState(0);
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("changePercent");
@@ -76,10 +77,12 @@ export function MarketBoardClient() {
     setError("");
 
     try {
+      const currentWatchlistSymbols = getEnabledWatchlistSymbols();
+      setWatchlistCount(currentWatchlistSymbols.length);
       let endpoint = sourceModeSetting === "demo" ? "/api/public/market?demoMode=true" : "/api/public/market";
 
       if (marketViewMode === "watchlist") {
-        const enabledSymbols = getEnabledWatchlistSymbols();
+        const enabledSymbols = currentWatchlistSymbols;
         setWatchlistSymbols(enabledSymbols);
 
         if (enabledSymbols.length === 0) {
@@ -119,6 +122,10 @@ export function MarketBoardClient() {
     }
   }, [marketViewMode, sourceModeSetting]);
 
+  const refreshWatchlistCount = useCallback(() => {
+    setWatchlistCount(getEnabledWatchlistSymbols().length);
+  }, []);
+
   useEffect(() => {
     const savedSourceMode = window.localStorage.getItem(sourceModeStorageKey);
     const savedRefreshRaw = window.localStorage.getItem(refreshStorageKey);
@@ -132,6 +139,23 @@ export function MarketBoardClient() {
     }
     setSettingsLoaded(true);
   }, []);
+
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key === watchlistStorageKey) {
+        refreshWatchlistCount();
+      }
+    }
+
+    refreshWatchlistCount();
+    window.addEventListener("focus", refreshWatchlistCount);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("focus", refreshWatchlistCount);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [refreshWatchlistCount]);
 
   useEffect(() => {
     window.localStorage.setItem(sourceModeStorageKey, sourceModeSetting);
@@ -190,78 +214,75 @@ export function MarketBoardClient() {
     window.localStorage.setItem(refreshStorageKey, String(nextInterval));
   }
 
+  function viewTabClass(mode: MarketViewMode) {
+    const isActive = marketViewMode === mode;
+    return `min-h-11 rounded-lg border px-5 py-2.5 text-sm font-bold transition duration-200 sm:min-w-32 ${
+      isActive
+        ? "border-indigo-400/55 bg-gradient-to-r from-indigo-500/20 to-violet-500/20 text-white shadow-[0_18px_35px_rgba(99,102,241,0.18)]"
+        : "border-transparent text-slate-300 hover:bg-slate-800/80 hover:text-slate-50"
+    }`;
+  }
+
   return (
-    <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 border-b border-cyan/15 pb-5 md:flex-row md:items-end md:justify-between">
+    <main className="page-shell">
+      <div className="page-container">
+        <div className="page-header">
           <div>
-            <Link href="/" className="text-sm uppercase tracking-[0.18em] text-cyan">← 首頁</Link>
-            <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">市場看盤</h1>
-            <p className="mt-3 text-muted">OKX 加密貨幣為真實資料；台股目前以 Demo 資料展示 ESP32 同步與提醒流程。</p>
+            <Link href="/" className="back-link">← 首頁</Link>
+            <h1 className="page-title">市場看盤</h1>
+            <p className="page-copy">OKX 加密貨幣為真實資料；台股目前以 Demo 資料展示 ESP32 同步與提醒流程。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center gap-1 rounded border border-white/10 bg-black/35 px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted">
-              <span className="px-1">View:</span>
+            <div className="segmented-control">
+              <span className="segmented-label">View</span>
               <button
                 type="button"
                 onClick={() => updateMarketViewMode("default")}
-                className={`rounded px-2 py-1 transition ${
-                  marketViewMode === "default"
-                    ? "bg-cyan/15 text-cyan"
-                    : "text-muted hover:bg-white/5 hover:text-cyan"
-                }`}
+                className={viewTabClass("default")}
               >
                 預設市場
               </button>
               <button
                 type="button"
                 onClick={() => updateMarketViewMode("watchlist")}
-                className={`rounded px-2 py-1 transition ${
-                  marketViewMode === "watchlist"
-                    ? "bg-cyan/15 text-cyan"
-                    : "text-muted hover:bg-white/5 hover:text-cyan"
-                }`}
+                className={viewTabClass("watchlist")}
               >
-                我的自選
+                我的自選{watchlistCount > 0 ? ` ${watchlistCount}` : ""}
               </button>
             </div>
             <PriceColorModeToggle mode={priceColorMode} onChange={setPriceColorMode} />
             <button
               type="button"
               onClick={() => updateSourceMode(sourceModeSetting === "demo" ? "real" : "demo")}
-              className={`rounded border px-3 py-2 text-xs uppercase tracking-[0.14em] ${
+              className={`btn-secondary ${
                 sourceModeSetting === "demo"
-                  ? "border-yellow-400/45 bg-yellow/10 text-yellow"
-                  : "border-white/10 text-muted hover:border-cyan/35 hover:text-cyan"
+                  ? "border-amber-400/35 bg-amber-400/10 text-amber-100"
+                  : ""
               }`}
             >
               Demo Mode {sourceModeSetting === "demo" ? "On" : "Off"}
             </button>
-            <div className="flex flex-wrap items-center gap-1 rounded border border-white/10 bg-black/35 px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted">
-              <span className="px-1">Auto:</span>
+            <div className="segmented-control">
+              <span className="segmented-label">Auto</span>
               {refreshIntervals.map((interval) => (
                 <button
                   key={interval}
                   type="button"
                   onClick={() => updateRefreshInterval(interval)}
-                  className={`rounded px-2 py-1 transition ${
-                    refreshInterval === interval
-                      ? "bg-cyan/15 text-cyan"
-                      : "text-muted hover:bg-white/5 hover:text-cyan"
-                  }`}
+                  className={`segmented-option ${refreshInterval === interval ? "segmented-option-active" : ""}`}
                 >
                   {interval === 0 ? "Off" : `${interval}s`}
                 </button>
               ))}
             </div>
-            <Link href="/watchlist" className="rounded border border-[var(--border-pink)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-pink hover:bg-pink/10">
+            <Link href="/watchlist" className="btn-secondary">
               自選資產
             </Link>
             <button
               type="button"
               onClick={refresh}
               disabled={loading}
-              className="rounded border border-[var(--border-cyan)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-cyan hover:bg-cyan/10 disabled:cursor-wait disabled:opacity-60"
+              className="btn-primary disabled:cursor-wait"
             >
               {loading ? "更新中" : "Refresh"}
             </button>
@@ -274,14 +295,14 @@ export function MarketBoardClient() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜尋 symbol / displayName"
-              className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan outline-none placeholder:text-muted"
+              className="field"
             />
-            <select value={marketFilter} onChange={(event) => setMarketFilter(event.target.value as MarketFilter)} className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan">
+            <select value={marketFilter} onChange={(event) => setMarketFilter(event.target.value as MarketFilter)} className="field">
               <option value="ALL">ALL Market</option>
               <option value="TWSE">TWSE</option>
               <option value="OKX">OKX</option>
             </select>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)} className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan">
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)} className="field">
               <option value="ALL">ALL Status</option>
               <option value="up">up</option>
               <option value="down">down</option>
@@ -289,46 +310,46 @@ export function MarketBoardClient() {
               <option value="down_alert">down_alert</option>
               <option value="calm">calm</option>
             </select>
-            <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)} className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan">
+            <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)} className="field">
               <option value="price">依 price 排序</option>
               <option value="changePercent">依 changePercent 排序</option>
               <option value="volume">依 volume 排序</option>
             </select>
-            <button type="button" onClick={() => setSortDesc((value) => !value)} className="rounded border border-white/10 px-3 py-2 text-muted hover:border-cyan/40 hover:text-cyan">
+            <button type="button" onClick={() => setSortDesc((value) => !value)} className="btn-secondary">
               {sortDesc ? "由高到低" : "由低到高"}
             </button>
           </div>
-          <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted">
+          <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
             <span>更新時間：{updatedAt ? new Date(updatedAt).toLocaleString("zh-TW") : "尚未更新"}</span>
             <span>顯示：{filteredItems.length} / {items.length}</span>
             {marketViewMode === "watchlist" ? <span>我的自選：{watchlistSymbols.length}</span> : null}
             <span>Auto refresh: {refreshInterval === 0 ? "Off" : `${refreshInterval}s`}</span>
             <span>狀態摘要：{moodSummary}</span>
             {warnings.length > 0 ? (
-              <details className="text-yellow">
+              <details className="text-amber-200">
                 <summary className="cursor-pointer">資料來源說明</summary>
-                <div className="mt-2 max-w-3xl leading-5 text-yellow/90">{warnings.join("；")}</div>
+                <div className="mt-2 max-w-3xl leading-5 text-amber-200/90">{warnings.join("；")}</div>
               </details>
             ) : null}
           </div>
-          {error ? <div className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-red-300">{error}</div> : null}
+          {error ? <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
         </TerminalPanel>
 
         <section className="mt-5">
           <TerminalPanel title="即時行情" label={loading ? "LOADING" : "LIVE"}>
-            {loading && items.length === 0 ? <div className="p-6 text-muted">正在讀取真實資料...</div> : null}
+            {loading && items.length === 0 ? <div className="p-6 text-slate-300">正在讀取真實資料...</div> : null}
             {!loading && marketViewMode === "watchlist" && watchlistSymbols.length === 0 ? (
-              <div className="flex flex-col gap-4 p-6 text-muted sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 p-6 text-slate-400 sm:flex-row sm:items-center sm:justify-between">
                 <span>尚未新增自選資產。前往 /watchlist 新增。</span>
-                <Link href="/watchlist" className="w-fit rounded border border-[var(--border-cyan)] px-4 py-2 text-sm text-cyan hover:bg-cyan/10">
+                <Link href="/watchlist" className="btn-primary w-fit">
                   前往自選資產
                 </Link>
               </div>
             ) : null}
             {!loading && filteredItems.length === 0 && !(marketViewMode === "watchlist" && watchlistSymbols.length === 0) ? (
-              <div className="p-6 text-muted">沒有符合條件的商品。</div>
+              <div className="p-6 text-slate-300">沒有符合條件的商品。</div>
             ) : null}
-            {items.length > 0 ? <div className="hidden border-b border-cyan/15 px-3 pb-2 text-xs uppercase tracking-[0.16em] text-muted md:grid md:grid-cols-[1.1fr_0.9fr_0.9fr_1fr_1fr_0.9fr_0.8fr]">
+            {items.length > 0 ? <div className="hidden border-b border-slate-700/70 px-3 pb-3 text-xs font-semibold text-slate-300 md:grid md:grid-cols-[1.1fr_0.9fr_0.9fr_1fr_1fr_0.9fr_0.8fr]">
               <span>商品</span>
               <span>價格</span>
               <span>漲跌</span>
@@ -383,11 +404,11 @@ function MarketRow({ item, priceColorMode }: { item: MarketData; priceColorMode:
   return (
     <Link
       href={`/market/${item.market}/${encodeURIComponent(item.symbol)}`}
-      className="grid gap-2 border-b border-cyan/10 px-3 py-3 text-sm transition last:border-b-0 hover:bg-cyan/5 md:grid-cols-[1.1fr_0.9fr_0.9fr_1fr_1fr_0.9fr_0.8fr] md:items-center"
+      className="grid gap-2 border-b border-slate-700/60 px-3 py-3 text-sm transition duration-200 last:border-b-0 hover:bg-slate-900/85 md:grid-cols-[1.1fr_0.9fr_0.9fr_1fr_1fr_0.9fr_0.8fr] md:items-center"
     >
       <div>
-        <div className="font-orbitron text-base font-bold text-white">{item.symbol}</div>
-        <div className="text-xs uppercase tracking-[0.14em] text-muted">{item.displayName} / {item.market}</div>
+        <div className="font-mono text-base font-bold text-slate-50">{item.symbol}</div>
+        <div className="text-xs font-medium text-slate-300">{item.displayName} / {item.market}</div>
       </div>
       <div className={`font-mono text-base ${priceColor}`}>{item.price.toLocaleString()}</div>
       <div className={priceColor}>
@@ -395,20 +416,20 @@ function MarketRow({ item, priceColorMode }: { item: MarketData; priceColorMode:
         <br />
         {sign}{item.changePercent.toFixed(2)}%
       </div>
-      <div className="text-muted">
+      <div className="text-slate-400">
         H {item.high.toLocaleString()}
         <br />
         L {item.low.toLocaleString()}
       </div>
-      <div className="text-muted">
+      <div className="text-slate-400">
         Vol {item.volume.toLocaleString()}
         <br />
         {item.tradeDate ? `${item.tradeDate} ` : ""}{item.tradeTime}
       </div>
       <div className="flex flex-wrap gap-2">
-        <span className={`rounded border px-2 py-1 text-xs ${sourceClass[item.source]}`}>{item.source}</span>
-        {item.quoteQuality ? <span className={`rounded border px-2 py-1 text-xs ${qualityClass[item.quoteQuality]}`}>{qualityLabel(item)}</span> : null}
-        {item.stale ? <span className="rounded border border-yellow-400/40 px-2 py-1 text-xs text-yellow">STALE</span> : null}
+        <span className={`badge ${sourceClass[item.source]}`}>{item.source}</span>
+        {item.quoteQuality ? <span className={`badge ${qualityClass[item.quoteQuality]}`}>{qualityLabel(item)}</span> : null}
+        {item.stale ? <span className="badge border-amber-400/30 bg-amber-400/10 text-amber-200">STALE</span> : null}
       </div>
       <div className="flex md:justify-end">
         <StatusBadge status={item.status} colorMode={priceColorMode} />

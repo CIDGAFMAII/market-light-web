@@ -9,6 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
+        sans: ["var(--font-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
         orbitron: ["var(--font-orbitron)", "Orbitron", "sans-serif"],
         mono: ["var(--font-share-tech)", "Share Tech Mono", "monospace"],
       },
@@ -24,9 +25,11 @@ const config: Config = {
         muted: "var(--muted)",
       },
       boxShadow: {
-        cyan: "0 0 28px rgba(0, 255, 255, 0.18)",
-        pink: "0 0 28px rgba(255, 0, 255, 0.16)",
-        yellow: "0 0 24px rgba(250, 204, 21, 0.14)",
+        cyan: "0 18px 45px rgba(99, 102, 241, 0.12)",
+        pink: "0 18px 45px rgba(139, 92, 246, 0.12)",
+        yellow: "0 18px 45px rgba(250, 204, 21, 0.08)",
+        soft: "var(--shadow-soft)",
+        indigo: "var(--shadow-indigo)",
       },
     },
   },

@@ -202,22 +202,22 @@ export function WatchlistClient() {
   }
 
   return (
-    <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
+    <main className="page-shell">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-col gap-4 border-b border-cyan/15 pb-5 md:flex-row md:items-end md:justify-between">
+        <div className="page-header">
           <div>
-            <Link href="/market" className="text-sm uppercase tracking-[0.18em] text-cyan">← 市場看盤</Link>
-            <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">自選資產</h1>
-            <p className="mt-3 text-muted">選擇要出現在市場看盤與 ESP32 上的資產。</p>
+            <Link href="/market" className="back-link">← 市場看盤</Link>
+            <h1 className="page-title">自選資產</h1>
+            <p className="page-copy">選擇要出現在市場看盤與 ESP32 上的資產。</p>
           </div>
           <StatusBadge status="calm" />
         </div>
 
         {notice ? (
-          <div className={`mb-5 rounded border p-3 text-sm ${
+          <div className={`mb-5 rounded-xl border p-3 text-sm ${
             notice.tone === "success"
-              ? "border-green-500/40 bg-green-500/10 text-green-300"
-              : "border-red-500/40 bg-red-500/10 text-red-300"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              : "border-red-500/30 bg-red-500/10 text-red-200"
           }`}>
             {notice.message}
           </div>
@@ -226,7 +226,7 @@ export function WatchlistClient() {
         <TerminalPanel title="新增資產" label="ADD">
           <div className="grid gap-3 md:grid-cols-[0.8fr_1fr_1fr_auto]">
             <select
-              className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan"
+              className="field"
               value={market}
               onChange={(event) => {
                 const next = event.target.value as WatchMarket;
@@ -238,9 +238,9 @@ export function WatchlistClient() {
               <option value="OKX">OKX</option>
               <option value="TWSE">TWSE Demo</option>
             </select>
-            <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={symbol} onChange={(event) => setSymbol(event.target.value)} placeholder={market === "OKX" ? "BTC-USDT" : "2330"} />
-            <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="displayName" />
-            <button type="button" onClick={addItem} className="rounded border border-[var(--border-cyan)] px-4 py-2 text-cyan hover:bg-cyan/10">
+            <input className="field" value={symbol} onChange={(event) => setSymbol(event.target.value)} placeholder={market === "OKX" ? "BTC-USDT" : "2330"} />
+            <input className="field" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="displayName" />
+            <button type="button" onClick={addItem} className="btn-primary">
               Add Asset
             </button>
           </div>
@@ -250,36 +250,36 @@ export function WatchlistClient() {
           <TerminalPanel title="資產列表" label={`${items.length} ITEMS`}>
             <div className="space-y-3">
               {items.map((item) => (
-                <div key={item.id} className="rounded border border-cyan/10 bg-black/25 p-4">
+                <div key={item.id} className="soft-card p-4 transition duration-200 hover:border-slate-600/60">
                   <div className="grid gap-4 lg:grid-cols-[1.2fr_1.1fr_auto] lg:items-center">
                     <div>
-                      <div className="font-orbitron text-lg text-white">{item.symbol}</div>
-                      <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted">
+                      <div className="font-mono text-lg font-bold text-slate-50">{item.symbol}</div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-sm text-slate-300">
                         <span>{item.displayName}</span>
-                        <span className="rounded border border-cyan/25 px-2 py-0.5 text-xs text-cyan">{formatMarket(item.market)}</span>
+                        <span className="badge border-indigo-400/25 bg-indigo-500/10 text-indigo-200">{formatMarket(item.market)}</span>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:justify-end">
-                      <button type="button" onClick={() => updateItem(item.id, { syncToDevice: !item.syncToDevice })} className={`rounded border px-3 py-2 text-sm ${item.syncToDevice ? "border-cyan/40 bg-cyan/10 text-cyan" : "border-gray-500/40 text-muted"}`}>
+                      <button type="button" onClick={() => updateItem(item.id, { syncToDevice: !item.syncToDevice })} className={`btn-secondary ${item.syncToDevice ? "border-indigo-400/35 bg-indigo-500/10 text-indigo-100" : ""}`}>
                         顯示於 ESP32：{item.syncToDevice ? "是" : "否"}
                       </button>
-                      <button type="button" onClick={() => updateItem(item.id, { enabled: !item.enabled })} className={`rounded border px-3 py-2 text-sm ${item.enabled ? "border-green-500/40 text-green-300" : "border-gray-500/40 text-muted"}`}>
+                      <button type="button" onClick={() => updateItem(item.id, { enabled: !item.enabled })} className={`btn-secondary ${item.enabled ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : ""}`}>
                         顯示在看盤：{item.enabled ? "是" : "否"}
                       </button>
                     </div>
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => removeItem(item.id)} className="rounded border border-red-500/40 px-3 py-2 text-red-300 hover:bg-red-500/10">刪除</button>
+                      <button type="button" onClick={() => removeItem(item.id)} className="btn-danger">刪除</button>
                     </div>
                   </div>
-                  <details className="mt-3 text-xs text-muted">
-                    <summary className="cursor-pointer hover:text-cyan">進階</summary>
-                    <div className="mt-3 rounded border border-white/10 bg-black/25 p-3">
-                      <div>驗證狀態：<span className={item.validation ? (item.validation.ok ? "text-green-300" : "text-yellow") : "text-muted"}>{item.validation ? item.validation.message : "尚未驗證"}</span></div>
+                  <details className="mt-3 text-xs text-slate-400">
+                    <summary className="cursor-pointer hover:text-indigo-200">進階</summary>
+                    <div className="mt-3 rounded-xl border border-slate-700/70 bg-slate-950/75 p-3">
+                      <div>驗證狀態：<span className={item.validation ? (item.validation.ok ? "text-emerald-200" : "text-amber-200") : "text-slate-400"}>{item.validation ? item.validation.message : "尚未驗證"}</span></div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" onClick={() => validate(item)} disabled={loadingId === item.id} className="rounded border border-[var(--border-yellow)] px-3 py-2 text-yellow hover:bg-yellow/10 disabled:cursor-wait disabled:opacity-60">
+                        <button type="button" onClick={() => validate(item)} disabled={loadingId === item.id} className="btn-secondary disabled:cursor-wait">
                           {loadingId === item.id ? "驗證中" : item.market === "OKX" ? "驗證 OKX" : "測試 TWSE"}
                         </button>
-                        {item.market === "TWSE" ? <span className="rounded border border-white/10 px-3 py-2">TWSE Demo</span> : null}
+                        {item.market === "TWSE" ? <span className="badge">TWSE Demo</span> : null}
                       </div>
                     </div>
                   </details>
@@ -291,20 +291,20 @@ export function WatchlistClient() {
 
         <section className="mt-5">
           <TerminalPanel title="ESP32 顯示清單" label={`${deviceSyncItems.length} ASSETS`}>
-            <div className="rounded border border-cyan/10 bg-black/30 p-4">
-              <div className="mb-3 text-sm text-muted">
+            <div className="soft-card p-4">
+              <div className="mb-3 text-sm text-slate-400">
                 目前會顯示 {deviceSyncItems.length} 個資產：
               </div>
               {deviceSyncItems.length > 0 ? (
-                <ul className="space-y-2 font-mono text-sm text-cyan">
+                <ul className="space-y-2 font-mono text-sm text-indigo-200">
                   {deviceSyncItems.map((item) => (
-                    <li key={item.id} className="rounded border border-white/10 bg-black/35 px-3 py-2">
+                    <li key={item.id} className="rounded-lg border border-slate-700/70 bg-slate-950/80 px-3 py-2">
                       {item.symbol}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="rounded border border-white/10 bg-black/35 p-3 text-sm text-muted">
+                <div className="rounded-lg border border-slate-700/70 bg-slate-950/75 p-3 text-sm text-slate-300">
                   尚未選擇資產
                 </div>
               )}
@@ -313,7 +313,7 @@ export function WatchlistClient() {
                   type="button"
                   onClick={saveToDevice}
                   disabled={savingDevice}
-                  className="rounded border border-[var(--border-cyan)] bg-cyan/10 px-5 py-2 text-sm uppercase tracking-[0.16em] text-cyan transition hover:bg-cyan/20 disabled:cursor-wait disabled:opacity-60"
+                  className="btn-primary disabled:cursor-wait"
                 >
                   {savingDevice ? "儲存中" : "儲存到 ESP32"}
                 </button>
@@ -322,27 +322,27 @@ export function WatchlistClient() {
           </TerminalPanel>
         </section>
 
-        <details className="mt-5 rounded border border-white/10 bg-black/20 p-4 text-sm text-muted">
-          <summary className="cursor-pointer uppercase tracking-[0.16em] hover:text-cyan">開發者資訊</summary>
+        <details className="mt-5 rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4 text-sm text-slate-400">
+          <summary className="cursor-pointer font-semibold hover:text-indigo-200">開發者資訊</summary>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <label className="grid gap-2">
               Device ID
               <input
-                className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan"
+                className="field"
                 value={deviceId}
                 onChange={(event) => setDeviceId(event.target.value)}
                 placeholder={defaultDeviceId}
               />
             </label>
             <div className="flex flex-wrap items-end gap-2">
-              <button type="button" onClick={resetItems} className="rounded border border-yellow-400/40 px-3 py-2 text-yellow hover:bg-yellow/10">
+              <button type="button" onClick={resetItems} className="btn-secondary">
                 Reset watchlist
               </button>
               <button
                 type="button"
                 onClick={copyDeviceUrl}
                 disabled={!deviceQueryUrl}
-                className="rounded border border-[var(--border-cyan)] px-3 py-2 text-cyan transition hover:bg-cyan/10 disabled:cursor-not-allowed disabled:opacity-40"
+                className="btn-secondary"
               >
                 {copiedUrl ? "已複製" : "複製 API URL"}
               </button>
@@ -353,12 +353,12 @@ export function WatchlistClient() {
             <InfoLine label="Symbols" value={deviceSymbols || "尚未選擇資產"} />
             <div className="flex flex-wrap gap-3 lg:col-span-2">
               {fixedDeviceMarketUrl ? (
-                <a href={fixedDeviceMarketUrl} target="_blank" rel="noreferrer" className="rounded border border-[var(--border-pink)] px-3 py-2 text-pink hover:bg-pink/10">
+                <a href={fixedDeviceMarketUrl} target="_blank" rel="noreferrer" className="btn-secondary">
                   Open Device API
                 </a>
               ) : null}
               {fixedDeviceConfigUrl ? (
-                <a href={fixedDeviceConfigUrl} target="_blank" rel="noreferrer" className="rounded border border-[var(--border-cyan)] px-3 py-2 text-cyan hover:bg-cyan/10">
+                <a href={fixedDeviceConfigUrl} target="_blank" rel="noreferrer" className="btn-secondary">
                   Open Config API
                 </a>
               ) : null}
@@ -372,9 +372,9 @@ export function WatchlistClient() {
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-white/10 bg-black/30 p-3">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-muted">{label}</div>
-      <div className="break-all font-mono text-cyan">{value}</div>
+    <div className="rounded-xl border border-slate-700/70 bg-slate-950/80 p-3">
+      <div className="mb-2 text-xs font-semibold text-slate-400">{label}</div>
+      <div className="break-all font-mono text-indigo-200">{value}</div>
     </div>
   );
 }

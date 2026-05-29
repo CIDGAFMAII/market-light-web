@@ -66,27 +66,19 @@ export function PriceColorModeToggle({
   className = "",
 }: PriceColorModeToggleProps) {
   return (
-    <div className={`flex flex-wrap items-center gap-1 rounded border border-white/10 bg-black/35 px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted ${className}`}>
-      <span className="px-1">{label}</span>
+    <div className={`segmented-control ${className}`}>
+      <span className="segmented-label">{label}</span>
       <button
         type="button"
         onClick={() => onChange("international")}
-        className={`rounded px-2 py-1 transition ${
-          mode === "international"
-            ? "bg-cyan/15 text-cyan"
-            : "text-muted hover:bg-white/5 hover:text-cyan"
-        }`}
+        className={`segmented-option ${mode === "international" ? "segmented-option-active" : ""}`}
       >
         綠漲紅跌
       </button>
       <button
         type="button"
         onClick={() => onChange("taiwan")}
-        className={`rounded px-2 py-1 transition ${
-          mode === "taiwan"
-            ? "bg-cyan/15 text-cyan"
-            : "text-muted hover:bg-white/5 hover:text-cyan"
-        }`}
+        className={`segmented-option ${mode === "taiwan" ? "segmented-option-active" : ""}`}
       >
         紅漲綠跌
       </button>

@@ -30,8 +30,8 @@ export function MarketDetailPricePanel({ price, change, changePercent }: MarketD
 
 function ColoredDataLine({ label, value, valueClassName }: { label: string; value: string; valueClassName: string }) {
   return (
-    <div className="rounded border border-cyan/10 bg-black/25 p-3">
-      <div className="text-xs uppercase tracking-[0.18em] text-muted">{label}</div>
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-3">
+      <div className="text-xs font-semibold text-slate-300">{label}</div>
       <div className={`mt-2 font-mono ${valueClassName}`}>{value}</div>
     </div>
   );
