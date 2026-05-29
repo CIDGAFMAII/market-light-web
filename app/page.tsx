@@ -16,9 +16,10 @@ export default function Home() {
         <Link href="/" className="font-orbitron text-lg font-black uppercase tracking-[0.22em] text-cyan">
           Market Light
         </Link>
-        <div className="flex gap-4 text-sm uppercase tracking-[0.16em] text-muted">
-          <Link className="hover:text-cyan" href="/market">市場</Link>
-          <Link className="hover:text-cyan" href="/demo">展示</Link>
+        <div className="flex flex-wrap justify-end gap-4 text-sm uppercase tracking-[0.16em] text-muted">
+          <Link className="hover:text-cyan" href="/market">市場看盤</Link>
+          <Link className="hover:text-cyan" href="/demo">裝置展示</Link>
+          <Link className="hover:text-cyan" href="/watchlist">自選同步</Link>
           <Link className="hover:text-cyan" href="/dashboard">控制台</Link>
         </div>
       </nav>
@@ -42,13 +43,19 @@ export default function Home() {
               href="/demo"
               className="rounded border border-[var(--border-cyan)] bg-cyan/10 px-5 py-3 font-orbitron text-sm uppercase tracking-[0.18em] text-cyan shadow-cyan transition hover:bg-cyan/20"
             >
-              查看展示
+              裝置展示
             </Link>
             <Link
-              href="/dashboard"
+              href="/market"
               className="rounded border border-[var(--border-pink)] bg-pink/10 px-5 py-3 font-orbitron text-sm uppercase tracking-[0.18em] text-pink shadow-pink transition hover:bg-pink/20"
             >
-              打開控制台
+              市場看盤
+            </Link>
+            <Link
+              href="/watchlist"
+              className="rounded border border-white/10 px-5 py-3 font-orbitron text-sm uppercase tracking-[0.18em] text-muted transition hover:border-cyan/40 hover:text-cyan"
+            >
+              自選同步
             </Link>
           </div>
         </div>
