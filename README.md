@@ -39,14 +39,14 @@ demo provider only
 
 ## Market Page
 
-`/market` is a watch-board style page with:
+`/market` is the real market watch page. It is intentionally quieter than the competition demo page and focuses on scanning live TWSE / OKX data:
 
 - Real TWSE / OKX data from `/api/public/market`
 - Real / Demo switch:
   - Real: `/api/public/market`
   - Demo: `/api/public/market?demoMode=true`
 - Auto refresh: `Off / 10s / 30s / 60s`
-- Market mood summary and companion message
+- Compact market mood summary
 - Search by `symbol` or `displayName`
 - Sort by `price`, `changePercent`, or `volume`
 - Filter by market: `ALL / TWSE / OKX`
@@ -54,7 +54,20 @@ demo provider only
 - Source display: `TWSE / OKX / CACHE / DEMO`
 - Stale badge for cache or fallback data
 - Refresh button
-- Loading, error, and fallback warnings
+- Loading and error states
+- Compact fallback notice with expandable provider warnings
+
+## Demo Page
+
+`/demo` is the competition showcase page for judges and live demos. It contains the visual and narrative device experience:
+
+- OLED preview
+- RGB / status preview
+- Companion face and `normal / flirt / quiet` message modes
+- Interactive status switching: `calm / up / up_alert / down / down_alert / error / closed`
+- Fallback scenario demonstration with `DEMO` / `STALE` badges
+- ESP32 JSON preview
+- Device config and device market API URL examples
 
 ## Watchlist
 
@@ -230,6 +243,13 @@ Dashboard API Debug:
 ```text
 http://localhost:3000/dashboard/api-debug
 ```
+
+## Page Roles
+
+- `/market`: real market watch page for TWSE / OKX quotes.
+- `/demo`: competition showcase and device interaction story.
+- `/watchlist`: choose which assets synchronize to ESP32.
+- `/dashboard/api-debug`: API testing and OLED/device preview verification.
 
 ## Storage and Cache Limits
 
