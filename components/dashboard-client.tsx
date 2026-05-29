@@ -22,12 +22,18 @@ type DashboardStats = {
 
 export function DashboardClient() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadStats() {
+      const userId = window.localStorage.getItem("ml_auth_user_id");
+      if (!userId) {
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
       try {
-        const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
         const res = await fetch("/api/web/dashboard", {
           headers: {
             "x-user-id": userId,
@@ -36,9 +42,13 @@ export function DashboardClient() {
         const data = await res.json();
         if (data.success) {
           setStats(data);
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
         }
       } catch (err) {
         console.error("Failed to load dashboard stats", err);
+        setIsLoggedIn(false);
       } finally {
         setLoading(false);
       }
@@ -54,19 +64,29 @@ export function DashboardClient() {
     );
   }
 
-  const d = stats || {
-    database: "已啟用 (Prisma Postgres)",
-    auth: "已啟用 (Mock)",
-    deviceName: "Market Light",
-    bindStatus: "已綁定",
-    deviceCode: "ML-ESP32-DEMO",
-    lastSeenAt: "無紀錄",
-    stockCount: 0,
-    quietMode: "關閉",
-    demoMode: "關閉",
-    petName: "Miko",
-    apiStatus: "連線正常",
-  };
+  if (!isLoggedIn || !stats) {
+    return (
+      <div>
+        <div className="page-header">
+          <div>
+            <Link href="/" className="back-link">← 首頁</Link>
+            <h1 className="page-title">控制台</h1>
+            <p className="page-copy">系統設定總覽，目前已啟用遠端 Neon PostgreSQL 資料庫保存設定。</p>
+          </div>
+          <StatusBadge status="error" />
+        </div>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8 soft-card bg-slate-950/40 border-slate-800/80">
+          <div className="text-5xl mb-4">🔒</div>
+          <h2 className="text-xl font-bold text-slate-100 mb-2">控制台已被鎖定</h2>
+          <p className="text-sm text-slate-400 max-w-sm mb-6">
+            此功能需要先登入您的 Demo 帳號以啟用遠端資料庫連線。請點選右側「裝置狀態」面板中的 <b>🔑 帳戶登入</b>。
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const d = stats;
 
   return (
     <div>

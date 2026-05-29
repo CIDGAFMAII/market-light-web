@@ -13,9 +13,17 @@ export function CompanionSettingsClient() {
   const [status, setStatus] = useState<MarketStatus>("calm");
   const message = companionMessage(status, mode);
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     async function loadSettings() {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      const userId = window.localStorage.getItem("ml_auth_user_id");
+      if (!userId) {
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
       try {
         const res = await fetch("/api/web/settings", {
           headers: {
@@ -25,9 +33,15 @@ export function CompanionSettingsClient() {
         const data = await res.json();
         if (data.success && data.settings && isCompanionMode(data.settings.companionMode)) {
           setMode(data.settings.companionMode);
+          setIsLoggedIn(true);
+        } else {
+          setIsLoggedIn(false);
         }
       } catch (err) {
         console.error("Failed to load settings from API", err);
+        setIsLoggedIn(false);
+      } finally {
+        setLoading(false);
       }
     }
     loadSettings();
@@ -51,6 +65,26 @@ export function CompanionSettingsClient() {
     } catch (err) {
       console.error("Failed to update companion mode", err);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center font-mono text-sm text-indigo-300">
+        正在載入小助手數據...
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8 soft-card bg-slate-950/40 border-slate-800/80">
+        <div className="text-5xl mb-4">🔒</div>
+        <h2 className="text-xl font-bold text-slate-100 mb-2">頁面已被鎖定</h2>
+        <p className="text-sm text-slate-400 max-w-sm mb-6">
+          此功能需要先登入您的 Demo 帳號以啟用遠端資料庫連線。請點選右側「裝置狀態」面板中的 <b>🔑 帳戶登入</b>。
+        </p>
+      </div>
+    );
   }
 
   return (

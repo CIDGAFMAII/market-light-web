@@ -11,22 +11,17 @@ export function getMockUserId(req: Request): string | null {
   return req.headers.get("x-user-id");
 }
 
-/** 驗證 userId 是否存在於資料庫，回傳 User 物件或 null */
 export async function getAuthUser(req: Request) {
   const userId = getMockUserId(req);
-  if (userId) {
+  if (userId && userId !== "null" && userId !== "undefined") {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) return user;
   }
-  // Fallback to the first user in the database (Demo User) for MVP ease of use
-  return prisma.user.findFirst();
+  return null;
 }
 
 /** 取得預設裝置（MVP 單裝置模式） */
 export async function getDefaultDevice(userId: string) {
-  // Try to find the device belonging to this user
   const device = await prisma.device.findFirst({ where: { userId } });
-  if (device) return device;
-  // Fallback to any device if none belongs to the user
-  return prisma.device.findFirst();
+  return device;
 }
