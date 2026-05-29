@@ -66,7 +66,8 @@ demo provider only
 - View switch:
   - Default market: reads the system default list from `/api/public/market`
   - My watchlist: reads enabled assets from the `/watchlist` `localStorage` list and requests `/api/device/market?symbols=...`
-- Auto refresh: `Off / 10s / 30s / 60s`
+- Auto refresh: `Off / 5s / 10s / 30s`
+- Passive refresh protection: when My watchlist has many OKX real-time assets, `/market` automatically uses a safer effective refresh interval. Taiwan stock demo rows do not count toward this protection.
 - Compact market mood summary
 - Search by `symbol` or `displayName`
 - Sort by `price`, `changePercent`, or `volume`

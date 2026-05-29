@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { TerminalPanel } from "@/components/terminal-panel";
 import { PriceColorModeToggle, usePriceColorMode } from "@/components/price-color-mode-toggle";
 import { getDirectionTextClass, type PriceColorMode } from "@/lib/market/color";
+import { getEffectiveRefreshIntervalSec } from "@/lib/market/refresh-policy";
 import type { MarketStatus } from "@/lib/market-status";
 import type { MarketData, MarketSource } from "@/lib/market/types";
 
@@ -64,6 +65,7 @@ export function MarketBoardClient() {
   const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(5);
   const [marketViewMode, setMarketViewMode] = useState<MarketViewMode>("default");
   const [watchlistCount, setWatchlistCount] = useState(0);
+  const [watchlistRealtimeCount, setWatchlistRealtimeCount] = useState(0);
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("changePercent");
@@ -77,12 +79,13 @@ export function MarketBoardClient() {
     setError("");
 
     try {
-      const currentWatchlistSymbols = getEnabledWatchlistSymbols();
-      setWatchlistCount(currentWatchlistSymbols.length);
+      const currentWatchlist = getEnabledWatchlistState();
+      setWatchlistCount(currentWatchlist.symbols.length);
+      setWatchlistRealtimeCount(currentWatchlist.realtimeAssetCount);
       let endpoint = sourceModeSetting === "demo" ? "/api/public/market?demoMode=true" : "/api/public/market";
 
       if (marketViewMode === "watchlist") {
-        const enabledSymbols = currentWatchlistSymbols;
+        const enabledSymbols = currentWatchlist.symbols;
         setWatchlistSymbols(enabledSymbols);
 
         if (enabledSymbols.length === 0) {
@@ -123,7 +126,9 @@ export function MarketBoardClient() {
   }, [marketViewMode, sourceModeSetting]);
 
   const refreshWatchlistCount = useCallback(() => {
-    setWatchlistCount(getEnabledWatchlistSymbols().length);
+    const currentWatchlist = getEnabledWatchlistState();
+    setWatchlistCount(currentWatchlist.symbols.length);
+    setWatchlistRealtimeCount(currentWatchlist.realtimeAssetCount);
   }, []);
 
   useEffect(() => {
@@ -162,17 +167,27 @@ export function MarketBoardClient() {
     void refresh();
   }, [refresh, sourceModeSetting]);
 
+  const realtimeAssetCount = useMemo(() => {
+    if (marketViewMode === "watchlist") return watchlistRealtimeCount;
+    return items.filter((item) => item.market === "OKX").length;
+  }, [items, marketViewMode, watchlistRealtimeCount]);
+
+  const effectiveRefreshInterval = useMemo(
+    () => getEffectiveRefreshIntervalSec(refreshInterval, realtimeAssetCount),
+    [refreshInterval, realtimeAssetCount],
+  );
+
   useEffect(() => {
     if (!settingsLoaded) return undefined;
     window.localStorage.setItem(refreshStorageKey, String(refreshInterval));
 
-    if (refreshInterval === 0) return undefined;
+    if (effectiveRefreshInterval === 0) return undefined;
     const timer = window.setInterval(() => {
       void refresh();
-    }, refreshInterval * 1000);
+    }, effectiveRefreshInterval * 1000);
 
     return () => window.clearInterval(timer);
-  }, [refresh, refreshInterval, settingsLoaded]);
+  }, [effectiveRefreshInterval, refresh, refreshInterval, settingsLoaded]);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -324,6 +339,9 @@ export function MarketBoardClient() {
             <span>顯示：{filteredItems.length} / {items.length}</span>
             {marketViewMode === "watchlist" ? <span>我的自選：{watchlistSymbols.length}</span> : null}
             <span>Auto refresh: {refreshInterval === 0 ? "Off" : `${refreshInterval}s`}</span>
+            {refreshInterval !== effectiveRefreshInterval ? (
+              <span>實際 {effectiveRefreshInterval}s，依即時資產數量自動調整</span>
+            ) : null}
             <span>狀態摘要：{moodSummary}</span>
             {warnings.length > 0 ? (
               <details className="text-amber-200">
@@ -368,14 +386,15 @@ export function MarketBoardClient() {
   );
 }
 
-function getEnabledWatchlistSymbols() {
+function getEnabledWatchlistState() {
   try {
     const raw = window.localStorage.getItem(watchlistStorageKey);
     const parsed = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) return { symbols: [], realtimeAssetCount: 0 };
 
     const seen = new Set<string>();
     const symbols: string[] = [];
+    let realtimeAssetCount = 0;
 
     for (const item of parsed as StoredWatchItem[]) {
       const market = item.market === "OKX" || item.market === "TWSE" ? item.market : null;
@@ -389,11 +408,15 @@ function getEnabledWatchlistSymbols() {
       if (seen.has(token)) continue;
       seen.add(token);
       symbols.push(token);
+
+      if (market === "OKX") {
+        realtimeAssetCount += 1;
+      }
     }
 
-    return symbols;
+    return { symbols, realtimeAssetCount };
   } catch {
-    return [];
+    return { symbols: [], realtimeAssetCount: 0 };
   }
 }
 
