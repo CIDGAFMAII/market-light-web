@@ -17,7 +17,7 @@ type LoginModalProps = {
 export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [accountInput, setAccountInput] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
@@ -25,13 +25,10 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     if (!isOpen) return;
     async function fetchUsers() {
       try {
-        const res = await fetch("/api/public/users");
-        const data = await res.json();
+        const usersRes = await fetch("/api/public/users");
+        const data = await usersRes.json();
         if (data.success && Array.isArray(data.users)) {
           setUsers(data.users);
-          if (data.users.length > 0) {
-            setSelectedUserId(data.users[0].id);
-          }
         }
       } catch (e) {
         console.error("Failed to load users for login modal", e);
@@ -53,7 +50,29 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
       return;
     }
 
-    onLoginSuccess(selectedUserId);
+    const inputClean = accountInput.trim().toLowerCase();
+    
+    // Resolve input to seeded users
+    const matchedUser = users.find((u) => {
+      const emailClean = u.email.toLowerCase();
+      const nameClean = u.displayName.toLowerCase();
+      
+      if (emailClean === inputClean) return true;
+      if (nameClean === inputClean) return true;
+      
+      // Support User1 / User2 aliases
+      if (inputClean === "user1" && (emailClean.includes("demo@") || nameClean.includes("user 1"))) return true;
+      if (inputClean === "user2" && (emailClean.includes("user2") || nameClean.includes("user 2"))) return true;
+      
+      return false;
+    });
+
+    if (!matchedUser) {
+      setError("帳號不存在！請輸入預設帳戶：User1 或 User2");
+      return;
+    }
+
+    onLoginSuccess(matchedUser.id);
     onClose();
   }
 
@@ -79,18 +98,18 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <label className="block text-sm font-semibold text-slate-300">
-              選擇帳號
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="field mt-1.5 w-full cursor-pointer"
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.displayName} ({u.email})
-                  </option>
-                ))}
-              </select>
+              使用者帳號
+              <input
+                type="text"
+                placeholder="請輸入 User1 或 User2"
+                value={accountInput}
+                onChange={(e) => setAccountInput(e.target.value)}
+                className="field mt-1.5 w-full"
+                required
+              />
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                💡 提示：請輸入 <b>User1</b> 或 <b>User2</b> 以切換對應 Demo 帳戶
+              </p>
             </label>
 
             <label className="block text-sm font-semibold text-slate-300">
