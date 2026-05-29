@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  role         String   @default("user") // "user" | "admin"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  devices        Device[]
+  watchlistItems WatchlistItem[]
+}
+
+// ─────────────────────────────────────────────
+// DEVICE
+// ─────────────────────────────────────────────
+model Device {
+  id              String    @id @default(cuid())
+  deviceCode      String    @unique
+  deviceTokenHash String?
+  userId          String?
+  deviceName      String    @default("Market Light")
+  isBound         Boolean   @default(false)
+  firmwareVersion String?
+  lastSeenAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user     User?           @relation(fields: [userId], references: [id])
+  settings DeviceSettings?
+  stocks   DeviceStock[]
+  pet      PetSettings?
+  events   DeviceEvent[]
+}
+
+// ─────────────────────────────────────────────
+// DEVICE_SETTINGS
+// ─────────────────────────────────────────────
+model DeviceSettings {
+  id                 String   @id @default(cuid())
+  deviceId           String   @unique
+  brightness         Int      @default(80)
+  quietMode          Boolean  @default(false)
+  buzzerEnabled      Boolean  @default(true)
+  updateInterval     Int      @default(30000)
+  rotateInterval     Int      @default(45000)
+  demoMode           Boolean  @default(false)
+  companionMode      String   @default("normal")
+  refreshIntervalSec Int      @default(30)
+  detailChartRange   String   @default("15m")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  device Device @relation(fields: [deviceId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// DEVICE_STOCK  (ESP32 輪播清單)
+// ─────────────────────────────────────────────
+model DeviceStock {
+  id           String   @id @default(cuid())
+  deviceId     String
+  symbol       String
+  market       String // TWSE | OKX | DEMO
+  displayName  String
+  displayOrder Int      @default(0)
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@unique([deviceId, market, symbol])
+}
+
+// ─────────────────────────────────────────────
+// WATCHLIST_ITEM  (使用者自選清單，含 display_mode / trend_period)
+// ─────────────────────────────────────────────
+model WatchlistItem {
+  id          String   @id @default(cuid())
+  userId      String
+  market      String // OKX | TWSE | DEMO
+  symbol      String
+  displayMode Int      @default(2) // 0=ESP32 only, 1=web only, 2=both
+  trendPeriod Int      @default(1440) // minutes: 5 | 15 | 60 | 1440
+  sortOrder   Int      @default(0)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, market, symbol])
+}
+
+// ─────────────────────────────────────────────
+// PET_SETTINGS
+// ─────────────────────────────────────────────
+model PetSettings {
+  id                 String   @id @default(cuid())
+  deviceId           String   @unique
+  petName            String   @default("Market Pet")
+  petEnabled         Boolean  @default(true)
+  level              Int      @default(1)
+  exp                Int      @default(0)
+  mood               String   @default("calm")
+  animationStyle     String   @default("simple")
+  interactionEnabled Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  device Device @relation(fields: [deviceId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// MARKET_CACHE
+// ─────────────────────────────────────────────
+model MarketCache {
+  id            String   @id @default(cuid())
+  symbol        String
+  market        String
+  displayName   String
+  price         Float
+  yesterday     Float?
+  change        Float
+  changePercent Float
+  high          Float?
+  low           Float?
+  volume        Int?
+  tradeTime     String?
+  source        String
+  status        String
+  message       String?
+  updatedAt     DateTime @updatedAt
+
+  @@unique([symbol, market])
+}
+
+// ─────────────────────────────────────────────
+// DEVICE_EVENT
+// ─────────────────────────────────────────────
+model DeviceEvent {
+  id        String   @id @default(cuid())
+  deviceId  String
+  eventType String
+  message   String?
+  createdAt DateTime @default(now())
+
+  device Device @relation(fields: [deviceId], references: [id])
+}

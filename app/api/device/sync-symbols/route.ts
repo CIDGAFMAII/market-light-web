@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const settings = isObject(body.settings) && typeof body.settings.detailChartRange === "string" && isDetailChartRange(body.settings.detailChartRange)
       ? { detailChartRange: body.settings.detailChartRange }
       : undefined;
-    const config = updateDeviceConfig(deviceId, { syncSymbols, settings });
+    const config = await updateDeviceConfig(deviceId, { syncSymbols, settings });
 
     return NextResponse.json({
       success: true,

@@ -28,8 +28,6 @@ type Notice = {
   message: string;
 };
 
-const storageKey = "market-light-watchlist-v1";
-const detailChartRangeStorageKey = "market-light-detail-chart-range-v1";
 const defaultDeviceId = "ML-ESP32-DEMO";
 const detailChartRanges: DetailChartRange[] = ["5m", "15m", "1h", "24h"];
 
@@ -40,7 +38,6 @@ const defaultItems: WatchItem[] = [
 
 export function WatchlistClient() {
   const [items, setItems] = useState<WatchItem[]>(defaultItems);
-  const [loaded, setLoaded] = useState(false);
   const [origin, setOrigin] = useState("");
   const [market, setMarket] = useState<WatchMarket>("OKX");
   const [symbol, setSymbol] = useState("BTC-USDT");
@@ -54,30 +51,61 @@ export function WatchlistClient() {
   const [notice, setNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(storageKey);
-    const savedDetailChartRange = window.localStorage.getItem(detailChartRangeStorageKey);
-    let nextItems = defaultItems;
-    setOrigin(window.location.origin);
-    try {
-      const parsed = raw ? JSON.parse(raw) : defaultItems;
-      nextItems = Array.isArray(parsed) ? parsed : defaultItems;
-    } catch {
-      nextItems = defaultItems;
+    async function loadWatchlistAndSettings() {
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      setOrigin(window.location.origin);
+      
+      try {
+        const res = await fetch("/api/web/watchlist", {
+          method: "GET",
+          headers: {
+            "x-user-id": userId,
+          },
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.items)) {
+          const mappedItems: WatchItem[] = data.items.map((item: { id: string; market: string; symbol: string; enabled: boolean; displayMode: number }) => {
+            const frontendSymbol = item.market === "OKX" ? item.symbol.replace("/", "-") : item.symbol;
+            const displayName = item.market === "OKX" 
+              ? frontendSymbol.split("-")[0] 
+              : (frontendSymbol === "2330" ? "TSMC" : (frontendSymbol === "2317" ? "HONHAI" : (frontendSymbol === "2454" ? "MediaTek" : (frontendSymbol === "0050" ? "ETF 0050" : frontendSymbol))));
+            return {
+              id: item.id,
+              market: item.market as WatchMarket,
+              symbol: frontendSymbol,
+              displayName,
+              exchange: "tse",
+              enabled: item.enabled && (item.displayMode === 1 || item.displayMode === 2),
+              syncToDevice: item.displayMode === 0 || item.displayMode === 2,
+            };
+          });
+          setItems(mappedItems);
+          void validateLoadedOkxItems(mappedItems);
+        } else {
+          setItems(defaultItems);
+        }
+      } catch (err) {
+        console.error("Failed to load watchlist from API, using default items", err);
+        setItems(defaultItems);
+      }
+      
+      try {
+        const res = await fetch("/api/web/settings", {
+          headers: {
+            "x-user-id": userId,
+          },
+        });
+        const data = await res.json();
+        if (data.success && data.settings && isDetailChartRange(data.settings.detailChartRange)) {
+          setDetailChartRange(data.settings.detailChartRange);
+        }
+      } catch (err) {
+        console.error("Failed to load device settings from API", err);
+      }
     }
-    setItems(nextItems);
-    void validateLoadedOkxItems(nextItems);
-    if (isDetailChartRange(savedDetailChartRange)) {
-      setDetailChartRange(savedDetailChartRange);
-    }
-    setLoaded(true);
-  }, []);
 
-  useEffect(() => {
-    if (loaded) {
-      window.localStorage.setItem(storageKey, JSON.stringify(items));
-      window.localStorage.setItem(detailChartRangeStorageKey, detailChartRange);
-    }
-  }, [detailChartRange, items, loaded]);
+    loadWatchlistAndSettings();
+  }, []);
 
   async function validateLoadedOkxItems(loadedItems: WatchItem[]) {
     const okxItems = loadedItems.filter((item) => item.market === "OKX");
@@ -160,38 +188,209 @@ export function WatchlistClient() {
       return;
     }
 
-    if (market === "OKX") {
-      setAddingAsset(true);
-      const validation = await validateOkxInstrumentClient(cleanSymbol);
-      setAddingAsset(false);
-
-      if (!validation.ok) {
-        setNotice({ tone: "error", message: "找不到此 OKX 交易對，請確認格式，例如 BTC-USDT。" });
-        return;
+    setAddingAsset(true);
+    try {
+      if (market === "OKX") {
+        const validation = await validateOkxInstrumentClient(cleanSymbol);
+        if (!validation.ok) {
+          setNotice({ tone: "error", message: "找不到此 OKX 交易對，請確認格式，例如 BTC-USDT。" });
+          setAddingAsset(false);
+          return;
+        }
       }
-    }
 
-    setItems((current) => [
-      ...current,
-      {
-        ...createItem(market, cleanSymbol, cleanDisplayName, "tse"),
-        validation: market === "OKX" ? { ok: true, message: "Valid / Live" } : undefined,
-      },
-    ]);
-    setNotice({ tone: "success", message: "已新增到自選資產，可到市場看盤的『我的自選』查看。" });
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      const dbSymbol = market === "OKX" ? cleanSymbol.replace("-", "/") : cleanSymbol;
+
+      const res = await fetch("/api/web/watchlist", {
+        method: "POST",
+        headers: {
+          "x-user-id": userId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          market,
+          symbol: dbSymbol,
+          displayMode: 2,
+          trendPeriod: 1440,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newItem: WatchItem = {
+          id: data.item.id,
+          market,
+          symbol: cleanSymbol,
+          displayName: cleanDisplayName,
+          exchange: "tse",
+          enabled: true,
+          syncToDevice: true,
+          validation: market === "OKX" ? { ok: true, message: "Valid / Live" } : undefined,
+        };
+        setItems((current) => [...current, newItem]);
+        setNotice({ tone: "success", message: "已新增到自選資產，可到市場看盤的『我的自選』查看。" });
+      } else {
+        setNotice({ tone: "error", message: `新增失敗: ${data.message}` });
+      }
+    } catch {
+      setNotice({ tone: "error", message: "新增時發生錯誤。" });
+    } finally {
+      setAddingAsset(false);
+    }
   }
 
   function updateItem(id: string, patch: Partial<WatchItem>) {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
 
-  function removeItem(id: string) {
-    setItems((current) => current.filter((item) => item.id !== id));
+  async function toggleItemSyncToDevice(id: string, currentSyncToDevice: boolean, currentEnabled: boolean) {
+    const nextSyncToDevice = !currentSyncToDevice;
+    let displayMode = 1;
+    if (nextSyncToDevice && currentEnabled) displayMode = 2;
+    else if (nextSyncToDevice && !currentEnabled) displayMode = 0;
+    else if (!nextSyncToDevice && currentEnabled) displayMode = 1;
+
+    try {
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      const res = await fetch(`/api/web/watchlist/${id}`, {
+        method: "PUT",
+        headers: {
+          "x-user-id": userId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ displayMode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        updateItem(id, { syncToDevice: nextSyncToDevice });
+      } else {
+        setNotice({ tone: "error", message: `更新失敗: ${data.message}` });
+      }
+    } catch {
+      setNotice({ tone: "error", message: "連線錯誤，無法更新設定。" });
+    }
   }
 
-  function resetItems() {
-    setItems(defaultItems.map((item) => ({ ...item, id: createItemId(item.market, item.symbol) })));
-    setNotice({ tone: "success", message: "已恢復預設清單。" });
+  async function toggleItemEnabled(id: string, currentSyncToDevice: boolean, currentEnabled: boolean) {
+    const nextEnabled = !currentEnabled;
+    let displayMode = 1;
+    if (currentSyncToDevice && nextEnabled) displayMode = 2;
+    else if (currentSyncToDevice && !nextEnabled) displayMode = 0;
+    else if (!currentSyncToDevice && nextEnabled) displayMode = 1;
+
+    try {
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      const res = await fetch(`/api/web/watchlist/${id}`, {
+        method: "PUT",
+        headers: {
+          "x-user-id": userId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ displayMode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        updateItem(id, { enabled: nextEnabled });
+      } else {
+        setNotice({ tone: "error", message: `更新失敗: ${data.message}` });
+      }
+    } catch {
+      setNotice({ tone: "error", message: "連線錯誤，無法更新設定。" });
+    }
+  }
+
+  async function deleteWatchlistItem(id: string) {
+    try {
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      const res = await fetch(`/api/web/watchlist/${id}`, {
+        method: "DELETE",
+        headers: {
+          "x-user-id": userId,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setItems((current) => current.filter((item) => item.id !== id));
+        setNotice({ tone: "success", message: "已刪除該自選資產。" });
+      } else {
+        setNotice({ tone: "error", message: `刪除失敗: ${data.message}` });
+      }
+    } catch {
+      setNotice({ tone: "error", message: "連線錯誤，無法刪除。" });
+    }
+  }
+
+  async function resetItems() {
+    setNotice({ tone: "success", message: "重置中..." });
+    try {
+      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+
+      for (const item of items) {
+        await fetch(`/api/web/watchlist/${item.id}`, {
+          method: "DELETE",
+          headers: { "x-user-id": userId },
+        });
+      }
+
+      const nextItems: WatchItem[] = [];
+      const defaults = [
+        { market: "OKX" as const, symbol: "ETH-USDT", dbSymbol: "ETH/USDT", displayName: "ETH" },
+        { market: "TWSE" as const, symbol: "2330", dbSymbol: "2330", displayName: "TSMC" },
+      ];
+
+      for (const d of defaults) {
+        const res = await fetch("/api/web/watchlist", {
+          method: "POST",
+          headers: {
+            "x-user-id": userId,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            market: d.market,
+            symbol: d.dbSymbol,
+            displayMode: 2,
+            trendPeriod: 1440,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          nextItems.push({
+            id: data.item.id,
+            market: d.market,
+            symbol: d.symbol,
+            displayName: d.displayName,
+            exchange: "tse",
+            enabled: true,
+            syncToDevice: true,
+          });
+        }
+      }
+
+      setItems(nextItems);
+      setNotice({ tone: "success", message: "已恢復預設清單。" });
+    } catch {
+      setNotice({ tone: "error", message: "重置失敗。" });
+    }
+  }
+
+  async function updateDetailChartRange(range: DetailChartRange) {
+    const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+    try {
+      const res = await fetch("/api/web/settings", {
+        method: "PUT",
+        headers: {
+          "x-user-id": userId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ detailChartRange: range }),
+      });
+      const data = await res.json();
+      if (data.success && data.settings && isDetailChartRange(data.settings.detailChartRange)) {
+        setDetailChartRange(data.settings.detailChartRange);
+      }
+    } catch (err) {
+      console.error("Failed to update detailChartRange", err);
+    }
   }
 
   async function validate(item: WatchItem) {
@@ -353,15 +552,15 @@ export function WatchlistClient() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:justify-end">
-                      <button type="button" onClick={() => updateItem(item.id, { syncToDevice: !item.syncToDevice })} className={`btn-secondary ${item.syncToDevice ? "border-indigo-400/35 bg-indigo-500/10 text-indigo-100" : ""}`}>
+                      <button type="button" onClick={() => toggleItemSyncToDevice(item.id, item.syncToDevice, item.enabled)} className={`btn-secondary ${item.syncToDevice ? "border-indigo-400/35 bg-indigo-500/10 text-indigo-100" : ""}`}>
                         顯示於 ESP32：{item.syncToDevice ? "是" : "否"}
                       </button>
-                      <button type="button" onClick={() => updateItem(item.id, { enabled: !item.enabled })} className={`btn-secondary ${item.enabled ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : ""}`}>
+                      <button type="button" onClick={() => toggleItemEnabled(item.id, item.syncToDevice, item.enabled)} className={`btn-secondary ${item.enabled ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : ""}`}>
                         顯示在看盤：{item.enabled ? "是" : "否"}
                       </button>
                     </div>
                     <div className="flex justify-end">
-                      <button type="button" onClick={() => removeItem(item.id)} className="btn-danger">刪除</button>
+                      <button type="button" onClick={() => deleteWatchlistItem(item.id)} className="btn-danger">刪除</button>
                     </div>
                   </div>
                   <details className="mt-3 text-xs text-slate-400">
@@ -381,7 +580,7 @@ export function WatchlistClient() {
             </div>
           </TerminalPanel>
         </section>
-
+ 
         <section className="mt-5">
           <TerminalPanel title="ESP32 顯示清單" label={`${deviceSyncItems.length} ASSETS`}>
             <div className="grid gap-4 lg:grid-cols-[1fr_0.95fr]">
@@ -403,7 +602,7 @@ export function WatchlistClient() {
                   </div>
                 )}
               </div>
-
+ 
               <div className="soft-card p-4">
                 <div className="text-base font-semibold text-slate-50">ESP32 顯示設定</div>
                 <div className="mt-3 text-sm font-medium text-slate-300">詳細模式曲線範圍：</div>
@@ -412,7 +611,7 @@ export function WatchlistClient() {
                     <button
                       key={range}
                       type="button"
-                      onClick={() => setDetailChartRange(range)}
+                      onClick={() => updateDetailChartRange(range)}
                       className={`segmented-option ${detailChartRange === range ? "segmented-option-active" : ""}`}
                     >
                       {range}

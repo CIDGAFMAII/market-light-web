@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import type { CompanionMode } from "@/lib/companion";
 import type { DetailChartRange } from "@/lib/market/providers/okx-candles";
 
@@ -37,62 +38,147 @@ const defaultSettings: DeviceSettings = {
 
 const defaultSyncSymbols = ["TWSE:2330", "OKX:BTC-USDT"];
 
-// Local/dev fallback only. Store it on globalThis so Next.js route modules in
-// the same dev server process can share state. Vercel production needs durable
-// storage such as Vercel KV or Upstash Redis if settings must survive cold starts.
-const globalForDeviceConfig = globalThis as typeof globalThis & {
-  __marketLightDeviceConfigs?: Map<string, DeviceConfig>;
-};
-
-const deviceConfigs = globalForDeviceConfig.__marketLightDeviceConfigs ?? new Map<string, DeviceConfig>();
-globalForDeviceConfig.__marketLightDeviceConfigs = deviceConfigs;
-
-export function getDeviceConfig(deviceId: string) {
+export async function getDeviceConfig(deviceId: string): Promise<DeviceConfig> {
   const normalizedDeviceId = normalizeDeviceId(deviceId);
-  const existing = deviceConfigs.get(normalizedDeviceId);
 
-  if (existing) return cloneConfig(existing);
-
-  const nextConfig: DeviceConfig = {
-    deviceId: normalizedDeviceId,
-    updatedAt: new Date().toISOString(),
-    settings: { ...defaultSettings },
-    syncSymbols: [...defaultSyncSymbols],
-  };
-  deviceConfigs.set(normalizedDeviceId, nextConfig);
-
-  return cloneConfig(nextConfig);
-}
-
-export function updateDeviceConfig(deviceId: string, patch: DeviceConfigPatch) {
-  const current = getDeviceConfig(deviceId);
-  const nextConfig: DeviceConfig = {
-    ...current,
-    updatedAt: new Date().toISOString(),
-    settings: {
-      ...current.settings,
-      ...(patch.settings ?? {}),
+  let device = await prisma.device.findUnique({
+    where: { deviceCode: normalizedDeviceId },
+    include: {
+      settings: true,
+      stocks: {
+        orderBy: { displayOrder: "asc" },
+      },
     },
-    syncSymbols: patch.syncSymbols ? [...patch.syncSymbols] : [...current.syncSymbols],
+  });
+
+  if (!device) {
+    device = await prisma.device.create({
+      data: {
+        deviceCode: normalizedDeviceId,
+        deviceName: "Market Light Desk",
+        isBound: true,
+        settings: {
+          create: {
+            brightness: defaultSettings.brightness,
+            quietMode: defaultSettings.quietMode,
+            buzzerEnabled: defaultSettings.buzzerEnabled,
+            updateInterval: defaultSettings.refreshIntervalSec * 1000,
+            rotateInterval: 45000,
+            demoMode: defaultSettings.demoMode,
+            companionMode: defaultSettings.companionMode,
+            refreshIntervalSec: defaultSettings.refreshIntervalSec,
+            detailChartRange: defaultSettings.detailChartRange,
+          },
+        },
+        stocks: {
+          create: defaultSyncSymbols.map((item, index) => {
+            const [market, symbol] = item.split(":");
+            return {
+              market: market || "TWSE",
+              symbol: symbol || "",
+              displayName: symbol || "",
+              displayOrder: index,
+              enabled: true,
+            };
+          }),
+        },
+      },
+      include: {
+        settings: true,
+        stocks: {
+          orderBy: { displayOrder: "asc" },
+        },
+      },
+    });
+  }
+
+  const settings: DeviceSettings = {
+    demoMode: device.settings?.demoMode ?? defaultSettings.demoMode,
+    quietMode: device.settings?.quietMode ?? defaultSettings.quietMode,
+    companionMode: (device.settings?.companionMode as CompanionMode) ?? defaultSettings.companionMode,
+    refreshIntervalSec: device.settings?.refreshIntervalSec ?? defaultSettings.refreshIntervalSec,
+    detailChartRange: (device.settings?.detailChartRange as DetailChartRange) ?? defaultSettings.detailChartRange,
+    brightness: device.settings?.brightness ?? defaultSettings.brightness,
+    buzzerEnabled: device.settings?.buzzerEnabled ?? defaultSettings.buzzerEnabled,
   };
 
-  deviceConfigs.set(current.deviceId, nextConfig);
-  return cloneConfig(nextConfig);
+  const syncSymbols = device.stocks.map((s) => `${s.market}:${s.symbol}`);
+
+  return {
+    deviceId: device.deviceCode,
+    updatedAt: device.updatedAt.toISOString(),
+    settings,
+    syncSymbols,
+  };
 }
 
-export function updateDeviceSyncSymbols(deviceId: string, syncSymbols: string[]) {
+export async function updateDeviceConfig(deviceId: string, patch: DeviceConfigPatch): Promise<DeviceConfig> {
+  const normalizedDeviceId = normalizeDeviceId(deviceId);
+
+  let device = await prisma.device.findUnique({
+    where: { deviceCode: normalizedDeviceId },
+    include: { settings: true },
+  });
+
+  if (!device) {
+    await getDeviceConfig(normalizedDeviceId);
+    device = await prisma.device.findUnique({
+      where: { deviceCode: normalizedDeviceId },
+      include: { settings: true },
+    });
+  }
+
+  if (!device) {
+    throw new Error(`Device ${normalizedDeviceId} could not be created or found`);
+  }
+
+  if (patch.settings) {
+    const updateData: Record<string, unknown> = {};
+    if (patch.settings.brightness !== undefined) updateData.brightness = patch.settings.brightness;
+    if (patch.settings.quietMode !== undefined) updateData.quietMode = patch.settings.quietMode;
+    if (patch.settings.buzzerEnabled !== undefined) updateData.buzzerEnabled = patch.settings.buzzerEnabled;
+    if (patch.settings.demoMode !== undefined) updateData.demoMode = patch.settings.demoMode;
+    if (patch.settings.companionMode !== undefined) updateData.companionMode = patch.settings.companionMode;
+    if (patch.settings.refreshIntervalSec !== undefined) {
+      updateData.refreshIntervalSec = patch.settings.refreshIntervalSec;
+      updateData.updateInterval = patch.settings.refreshIntervalSec * 1000;
+    }
+    if (patch.settings.detailChartRange !== undefined) updateData.detailChartRange = patch.settings.detailChartRange;
+
+    await prisma.deviceSettings.update({
+      where: { deviceId: device.id },
+      data: updateData,
+    });
+  }
+
+  if (patch.syncSymbols) {
+    await prisma.deviceStock.deleteMany({
+      where: { deviceId: device.id },
+    });
+
+    await prisma.deviceStock.createMany({
+      data: patch.syncSymbols.map((item, index) => {
+        const [market, symbol] = item.split(":");
+        return {
+          deviceId: device!.id,
+          market: market || "TWSE",
+          symbol: symbol || "",
+          displayName: symbol || "",
+          displayOrder: index,
+          enabled: true,
+        };
+      }),
+    });
+  }
+
+  return getDeviceConfig(normalizedDeviceId);
+}
+
+export async function updateDeviceSyncSymbols(deviceId: string, syncSymbols: string[]): Promise<DeviceConfig> {
   return updateDeviceConfig(deviceId, { syncSymbols });
 }
 
 function normalizeDeviceId(deviceId: string) {
   const trimmed = deviceId.trim();
   return trimmed || defaultDeviceId;
-}
-
-function cloneConfig(config: DeviceConfig): DeviceConfig {
-  return {
-    ...config,
-    settings: { ...config.settings },
-    syncSymbols: [...config.syncSymbols],
-  };
 }
