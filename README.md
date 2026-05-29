@@ -58,7 +58,7 @@ demo provider only
 
 ## Watchlist
 
-`/watchlist` manages a local watchlist with `localStorage`.
+`/watchlist` manages a local watchlist with `localStorage`. It is also the setup page for choosing which stocks or assets are synchronized to the ESP32 display.
 
 Supported actions:
 
@@ -73,10 +73,33 @@ Supported actions:
 - Mark `syncToDevice`
 - Reset watchlist to defaults
 - Display the full device query URL, for example `http://localhost:3000/api/device/market?symbols=TWSE:2330,OKX:BTC-USDT`
+- Show the ESP32 sync list generated from `enabled=true` and `syncToDevice=true`
+- Copy the full Device API URL
+- Open the generated Device API URL in a new tab to inspect the JSON payload
 - Validate TWSE via `/api/provider/twse`
 - Validate OKX instruments via `/api/provider/okx/instruments`
 
-No database is used in this phase.
+Only items with both flags enabled are included in the ESP32 sync URL:
+
+```text
+enabled=true AND syncToDevice=true
+```
+
+Items with `enabled=false` are excluded even if `syncToDevice=true`. Items with `syncToDevice=false` are also excluded.
+
+The page builds a complete URL with `window.location.origin`:
+
+```text
+http://localhost:3000/api/device/market?symbols=TWSE:0050,TWSE:2330,OKX:BTC-USDT
+```
+
+After deployment, the same page automatically uses the Vercel origin:
+
+```text
+https://<vercel-domain>/api/device/market?symbols=TWSE:0050,TWSE:2330,OKX:BTC-USDT
+```
+
+The ESP32 should read the complete Vercel API URL during a real deployed demo. No database is used in this phase, so the selected sync list is sent through the `symbols` query string instead of being stored in a server-side table.
 
 ## Companion Mode
 

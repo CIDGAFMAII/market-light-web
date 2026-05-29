@@ -38,13 +38,14 @@ type Notice = {
 export function WatchlistClient() {
   const [items, setItems] = useState<WatchItem[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [origin, setOrigin] = useState("http://localhost:3000");
+  const [origin, setOrigin] = useState("");
   const [market, setMarket] = useState<WatchMarket>("TWSE");
   const [symbol, setSymbol] = useState("2330");
   const [displayName, setDisplayName] = useState("TSMC");
   const [exchange, setExchange] = useState<"tse" | "otc">("tse");
   const [loadingId, setLoadingId] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(storageKey);
@@ -63,15 +64,17 @@ export function WatchlistClient() {
     }
   }, [items, loaded]);
 
-  const deviceSymbols = useMemo(
+  const deviceSyncItems = useMemo(
     () =>
-      items
-        .filter((item) => item.enabled && item.syncToDevice)
-        .map((item) => `${item.market}:${item.symbol}`)
-        .join(","),
+      items.filter((item) => item.enabled && item.syncToDevice),
     [items],
   );
-  const deviceQueryUrl = `${origin}/api/device/market?symbols=${deviceSymbols}`;
+  const deviceSymbolList = useMemo(
+    () => deviceSyncItems.map((item) => `${item.market}:${item.symbol}`),
+    [deviceSyncItems],
+  );
+  const deviceSymbols = deviceSymbolList.join(",");
+  const deviceQueryUrl = deviceSymbols && origin ? `${origin}/api/device/market?symbols=${deviceSymbols}` : "";
 
   function addItem() {
     const cleanSymbol = symbol.trim().toUpperCase();
@@ -163,6 +166,13 @@ export function WatchlistClient() {
     }
   }
 
+  async function copyDeviceUrl() {
+    if (!deviceQueryUrl) return;
+    await navigator.clipboard.writeText(deviceQueryUrl);
+    setCopiedUrl(true);
+    window.setTimeout(() => setCopiedUrl(false), 1400);
+  }
+
   return (
     <main className="min-h-screen terminal-grid px-5 py-6 md:px-8 lg:px-12">
       <div className="mx-auto max-w-7xl">
@@ -170,7 +180,9 @@ export function WatchlistClient() {
           <div>
             <Link href="/market" className="text-sm uppercase tracking-[0.18em] text-cyan">← 市場看盤</Link>
             <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">自選股</h1>
-            <p className="mt-3 text-muted">使用 localStorage 管理自選清單，暫不寫入資料庫。</p>
+            <p className="mt-3 text-muted">
+              在這裡選擇要同步到 ESP32 的股票或資產。使用 localStorage 管理自選清單，暫不寫入資料庫。
+            </p>
           </div>
           <StatusBadge status="calm" />
         </div>
@@ -220,14 +232,20 @@ export function WatchlistClient() {
                   <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr_1.4fr] lg:items-center">
                     <div>
                       <div className="font-orbitron text-lg text-white">{item.symbol}</div>
-                      <div className="text-sm text-muted">{item.displayName} / {item.market}{item.market === "TWSE" ? ` / ${item.exchange}` : ""}</div>
+                      <div className="mt-1 grid gap-1 text-sm text-muted sm:grid-cols-2">
+                        <span>market：<span className="text-cyan">{item.market}</span></span>
+                        <span>symbol：<span className="text-white">{item.symbol}</span></span>
+                        <span>displayName：<span className="text-white">{item.displayName}</span></span>
+                        <span>validation：<span className={item.validation ? (item.validation.ok ? "text-green-300" : "text-yellow") : "text-muted"}>{item.validation ? item.validation.message : "尚未驗證"}</span></span>
+                      </div>
+                      {item.market === "TWSE" ? <div className="mt-1 text-xs uppercase tracking-[0.14em] text-muted">exchange：{item.exchange}</div> : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => updateItem(item.id, { enabled: !item.enabled })} className={`rounded border px-3 py-2 text-sm ${item.enabled ? "border-green-500/40 text-green-300" : "border-gray-500/40 text-muted"}`}>
-                        {item.enabled ? "已啟用" : "已停用"}
+                        enabled: {item.enabled ? "true" : "false"}
                       </button>
                       <button type="button" onClick={() => updateItem(item.id, { syncToDevice: !item.syncToDevice })} className={`rounded border px-3 py-2 text-sm ${item.syncToDevice ? "border-cyan/40 text-cyan" : "border-gray-500/40 text-muted"}`}>
-                        {item.syncToDevice ? "同步 ESP32" : "不同步"}
+                        syncToDevice: {item.syncToDevice ? "true" : "false"}
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -249,6 +267,11 @@ export function WatchlistClient() {
                       {item.validation.message}
                     </div>
                   ) : null}
+                  {!item.enabled || !item.syncToDevice ? (
+                    <div className="mt-3 rounded border border-white/10 bg-black/25 p-3 text-xs text-muted">
+                      {!item.enabled ? "enabled=false，因此不會進入 ESP32 同步 URL。" : "syncToDevice=false，因此不會進入 ESP32 同步 URL。"}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -256,12 +279,64 @@ export function WatchlistClient() {
         </section>
 
         <section className="mt-5">
-          <TerminalPanel title="Device symbols query" label="ESP32">
-            <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-sm text-cyan">
-              {deviceSymbols ? deviceQueryUrl : "尚未選擇同步商品"}
+          <TerminalPanel title="ESP32 同步清單" label={`${deviceSyncItems.length} SYNC`}>
+            <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+              <div className="rounded border border-cyan/10 bg-black/30 p-4">
+                <div className="mb-3 text-sm uppercase tracking-[0.18em] text-muted">
+                  目前會同步 {deviceSyncItems.length} 個項目
+                </div>
+                {deviceSymbolList.length > 0 ? (
+                  <div className="space-y-2 font-mono text-sm text-cyan">
+                    {deviceSymbolList.map((item) => (
+                      <div key={item} className="rounded border border-white/10 bg-black/35 px-3 py-2">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded border border-white/10 bg-black/35 p-3 text-sm text-muted">
+                    尚未選擇同步項目
+                  </div>
+                )}
+              </div>
+              <div className="rounded border border-cyan/10 bg-black/30 p-4">
+                <div className="mb-3 text-sm uppercase tracking-[0.18em] text-muted">Device API URL</div>
+                <div className="break-all rounded border border-white/10 bg-black/35 p-3 text-sm text-cyan">
+                  {deviceQueryUrl || "尚未選擇同步項目"}
+                </div>
+                {deviceSymbols ? (
+                  <div className="mt-3 break-all rounded border border-white/10 bg-black/25 p-3 text-xs text-muted">
+                    /api/device/market?symbols={deviceSymbols}
+                  </div>
+                ) : null}
+                <div className="mt-4 flex flex-wrap justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={copyDeviceUrl}
+                    disabled={!deviceQueryUrl}
+                    className="rounded border border-[var(--border-cyan)] px-3 py-2 text-sm uppercase tracking-[0.16em] text-cyan transition hover:bg-cyan/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {copiedUrl ? "已複製" : "Copy Device URL"}
+                  </button>
+                  {deviceQueryUrl ? (
+                    <a
+                      href={deviceQueryUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded border border-[var(--border-pink)] px-3 py-2 text-sm uppercase tracking-[0.16em] text-pink transition hover:bg-pink/10"
+                    >
+                      Open Device API
+                    </a>
+                  ) : (
+                    <span className="rounded border border-white/10 px-3 py-2 text-sm uppercase tracking-[0.16em] text-muted opacity-50">
+                      Open Device API
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="mt-3 flex justify-end">
-              <CopyJsonButton value={{ url: deviceSymbols ? deviceQueryUrl : "", symbols: deviceSymbols }} />
+            <div className="mt-4 flex justify-end">
+              <CopyJsonButton value={{ url: deviceQueryUrl, symbols: deviceSymbolList }} />
             </div>
           </TerminalPanel>
         </section>
