@@ -50,9 +50,17 @@ export function WatchlistClient() {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     async function loadWatchlistAndSettings() {
-      const userId = window.localStorage.getItem("ml_auth_user_id") || "clx1a2b3c0000qwer1234abcd";
+      const userId = window.localStorage.getItem("ml_auth_user_id");
+      if (!userId) {
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
       setOrigin(window.location.origin);
       
       try {
@@ -64,6 +72,7 @@ export function WatchlistClient() {
         });
         const data = await res.json();
         if (data.success && Array.isArray(data.items)) {
+          setIsLoggedIn(true);
           const mappedItems: WatchItem[] = data.items.map((item: { id: string; market: string; symbol: string; enabled: boolean; displayMode: number }) => {
             const frontendSymbol = item.market === "OKX" ? item.symbol.replace("/", "-") : item.symbol;
             const displayName = item.market === "OKX" 
@@ -82,11 +91,11 @@ export function WatchlistClient() {
           setItems(mappedItems);
           void validateLoadedOkxItems(mappedItems);
         } else {
-          setItems(defaultItems);
+          setIsLoggedIn(false);
         }
       } catch (err) {
         console.error("Failed to load watchlist from API, using default items", err);
-        setItems(defaultItems);
+        setIsLoggedIn(false);
       }
       
       try {
@@ -102,6 +111,7 @@ export function WatchlistClient() {
       } catch (err) {
         console.error("Failed to load device settings from API", err);
       }
+      setLoading(false);
     }
 
     loadWatchlistAndSettings();
@@ -491,6 +501,40 @@ export function WatchlistClient() {
     await navigator.clipboard.writeText(deviceQueryUrl);
     setCopiedUrl(true);
     window.setTimeout(() => setCopiedUrl(false), 1400);
+  }
+
+  if (loading) {
+    return (
+      <main className="page-shell">
+        <div className="mx-auto max-w-6xl flex h-64 items-center justify-center font-mono text-sm text-indigo-300">
+          正在載入自選清單...
+        </div>
+      </main>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <main className="page-shell">
+        <div className="mx-auto max-w-6xl">
+          <div className="page-header">
+            <div>
+              <Link href="/market" className="back-link">← 市場看盤</Link>
+              <h1 className="page-title">自選資產</h1>
+              <p className="page-copy">選擇要出現在市場看盤與 ESP32 上的資產。</p>
+            </div>
+            <StatusBadge status="error" />
+          </div>
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8 soft-card bg-slate-950/40 border-slate-800/80">
+            <div className="text-5xl mb-4">🔒</div>
+            <h2 className="text-xl font-bold text-slate-100 mb-2">頁面已被鎖定</h2>
+            <p className="text-sm text-slate-400 max-w-sm mb-6">
+              此功能需要先登入您的 Demo 帳號以啟用遠端資料庫連線。請點選右側「裝置狀態」面板中的 <b>🔑 帳戶登入</b>。
+            </p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
