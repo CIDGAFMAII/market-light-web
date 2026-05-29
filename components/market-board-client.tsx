@@ -23,7 +23,7 @@ type SortKey = "price" | "changePercent" | "volume";
 type MarketFilter = "ALL" | "TWSE" | "OKX";
 type StatusFilter = "ALL" | "up" | "down" | "up_alert" | "down_alert" | "calm";
 type SourceModeSetting = "real" | "demo";
-type RefreshInterval = 0 | 10 | 30 | 60;
+type RefreshInterval = 0 | 5 | 10 | 30 | 60;
 type MarketViewMode = "default" | "watchlist";
 type StoredWatchItem = {
   market?: string;
@@ -34,7 +34,7 @@ type StoredWatchItem = {
 const watchlistStorageKey = "market-light-watchlist-v1";
 const sourceModeStorageKey = "market-light-market-source-mode-v1";
 const refreshStorageKey = "market-light-market-refresh-sec-v1";
-const refreshIntervals: RefreshInterval[] = [0, 10, 30, 60];
+const refreshIntervals: RefreshInterval[] = [0, 5, 10, 30];
 
 const sourceClass: Record<MarketSource, string> = {
   TWSE: "border-slate-600/60 bg-slate-800/60 text-slate-300",
@@ -61,7 +61,7 @@ export function MarketBoardClient() {
   const [error, setError] = useState("");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sourceModeSetting, setSourceModeSetting] = useState<SourceModeSetting>("real");
-  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(30);
+  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(5);
   const [marketViewMode, setMarketViewMode] = useState<MarketViewMode>("default");
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
@@ -134,7 +134,7 @@ export function MarketBoardClient() {
     if (savedSourceMode === "real" || savedSourceMode === "demo") {
       setSourceModeSetting(savedSourceMode);
     }
-    if (savedRefresh === 0 || savedRefresh === 10 || savedRefresh === 30 || savedRefresh === 60) {
+    if (savedRefresh === 0 || savedRefresh === 5 || savedRefresh === 10 || savedRefresh === 30 || savedRefresh === 60) {
       setRefreshInterval(savedRefresh);
     }
     setSettingsLoaded(true);
