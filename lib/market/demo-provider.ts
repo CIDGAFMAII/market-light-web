@@ -20,6 +20,7 @@ export function getDemoMarketItem(target: MarketTarget): MarketData {
     volume: 0,
     tradeTime: demo.tradedAt,
     source: "DEMO",
+    quoteQuality: "fallback",
     status: demo.status,
     message: demo.mood,
     stale: true,

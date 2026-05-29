@@ -25,12 +25,21 @@ type RefreshInterval = 0 | 10 | 30 | 60;
 
 const sourceModeStorageKey = "market-light-market-source-mode-v1";
 const refreshStorageKey = "market-light-market-refresh-sec-v1";
+const refreshIntervals: RefreshInterval[] = [0, 10, 30, 60];
 
 const sourceClass: Record<MarketSource, string> = {
   TWSE: "border-cyan/40 text-cyan",
   OKX: "border-pink/40 text-pink",
+  FINMIND: "border-blue-400/40 text-blue-300",
   CACHE: "border-yellow/40 text-yellow",
   DEMO: "border-gray-500/40 text-muted",
+};
+
+const qualityClass = {
+  latest: "border-green-500/40 text-green-300",
+  partial: "border-yellow-400/40 text-yellow",
+  daily: "border-blue-400/40 text-blue-300",
+  fallback: "border-gray-500/40 text-muted",
 };
 
 export function MarketBoardClient() {
@@ -41,8 +50,9 @@ export function MarketBoardClient() {
   const [sourceMode, setSourceMode] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [sourceModeSetting, setSourceModeSetting] = useState<SourceModeSetting>("real");
-  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0);
+  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(30);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("changePercent");
   const [sortDesc, setSortDesc] = useState(true);
@@ -76,7 +86,8 @@ export function MarketBoardClient() {
 
   useEffect(() => {
     const savedSourceMode = window.localStorage.getItem(sourceModeStorageKey);
-    const savedRefresh = Number(window.localStorage.getItem(refreshStorageKey));
+    const savedRefreshRaw = window.localStorage.getItem(refreshStorageKey);
+    const savedRefresh = savedRefreshRaw === null ? Number.NaN : Number(savedRefreshRaw);
 
     if (savedSourceMode === "real" || savedSourceMode === "demo") {
       setSourceModeSetting(savedSourceMode);
@@ -84,6 +95,7 @@ export function MarketBoardClient() {
     if (savedRefresh === 0 || savedRefresh === 10 || savedRefresh === 30 || savedRefresh === 60) {
       setRefreshInterval(savedRefresh);
     }
+    setSettingsLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -92,6 +104,7 @@ export function MarketBoardClient() {
   }, [refresh, sourceModeSetting]);
 
   useEffect(() => {
+    if (!settingsLoaded) return undefined;
     window.localStorage.setItem(refreshStorageKey, String(refreshInterval));
 
     if (refreshInterval === 0) return undefined;
@@ -100,7 +113,7 @@ export function MarketBoardClient() {
     }, refreshInterval * 1000);
 
     return () => window.clearInterval(timer);
-  }, [refresh, refreshInterval]);
+  }, [refresh, refreshInterval, settingsLoaded]);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -135,6 +148,7 @@ export function MarketBoardClient() {
 
   function updateRefreshInterval(nextInterval: RefreshInterval) {
     setRefreshInterval(nextInterval);
+    window.localStorage.setItem(refreshStorageKey, String(nextInterval));
   }
 
   return (
@@ -144,7 +158,7 @@ export function MarketBoardClient() {
           <div>
             <Link href="/" className="text-sm uppercase tracking-[0.18em] text-cyan">← 首頁</Link>
             <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">市場看盤</h1>
-            <p className="mt-3 text-muted">真實 TWSE / OKX 看盤。fallback 只作為資料暫時不可用時的標示。</p>
+            <p className="mt-3 text-muted">OKX 加密貨幣為真實資料；台股目前以 Demo 資料展示 ESP32 同步與提醒流程。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -158,16 +172,23 @@ export function MarketBoardClient() {
             >
               Demo Mode {sourceModeSetting === "demo" ? "On" : "Off"}
             </button>
-            <select
-              value={refreshInterval}
-              onChange={(event) => updateRefreshInterval(Number(event.target.value) as RefreshInterval)}
-              className="rounded border border-white/10 bg-black/40 px-3 py-2 text-xs uppercase tracking-[0.12em] text-muted"
-            >
-              <option value={0}>Auto Off</option>
-              <option value={10}>10s</option>
-              <option value={30}>30s</option>
-              <option value={60}>60s</option>
-            </select>
+            <div className="flex flex-wrap items-center gap-1 rounded border border-white/10 bg-black/35 px-2 py-1 text-xs uppercase tracking-[0.12em] text-muted">
+              <span className="px-1">Auto:</span>
+              {refreshIntervals.map((interval) => (
+                <button
+                  key={interval}
+                  type="button"
+                  onClick={() => updateRefreshInterval(interval)}
+                  className={`rounded px-2 py-1 transition ${
+                    refreshInterval === interval
+                      ? "bg-cyan/15 text-cyan"
+                      : "text-muted hover:bg-white/5 hover:text-cyan"
+                  }`}
+                >
+                  {interval === 0 ? "Off" : `${interval}s`}
+                </button>
+              ))}
+            </div>
             <Link href="/watchlist" className="rounded border border-[var(--border-pink)] px-4 py-2 text-sm uppercase tracking-[0.16em] text-pink hover:bg-pink/10">
               自選股
             </Link>
@@ -215,10 +236,11 @@ export function MarketBoardClient() {
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted">
             <span>更新時間：{updatedAt ? new Date(updatedAt).toLocaleString("zh-TW") : "尚未更新"}</span>
             <span>顯示：{filteredItems.length} / {items.length}</span>
+            <span>Auto refresh: {refreshInterval === 0 ? "Off" : `${refreshInterval}s`}</span>
             <span>狀態摘要：{moodSummary}</span>
             {warnings.length > 0 ? (
               <details className="text-yellow">
-                <summary className="cursor-pointer">部分資料暫時使用 fallback</summary>
+                <summary className="cursor-pointer">資料來源說明</summary>
                 <div className="mt-2 max-w-3xl leading-5 text-yellow/90">{warnings.join("；")}</div>
               </details>
             ) : null}
@@ -278,10 +300,11 @@ function MarketRow({ item }: { item: MarketData }) {
       <div className="text-muted">
         Vol {item.volume.toLocaleString()}
         <br />
-        {item.tradeTime}
+        {item.tradeDate ? `${item.tradeDate} ` : ""}{item.tradeTime}
       </div>
       <div className="flex flex-wrap gap-2">
         <span className={`rounded border px-2 py-1 text-xs ${sourceClass[item.source]}`}>{item.source}</span>
+        {item.quoteQuality ? <span className={`rounded border px-2 py-1 text-xs ${qualityClass[item.quoteQuality]}`}>{qualityLabel(item)}</span> : null}
         {item.stale ? <span className="rounded border border-yellow-400/40 px-2 py-1 text-xs text-yellow">STALE</span> : null}
       </div>
       <div className="flex md:justify-end">
@@ -289,4 +312,14 @@ function MarketRow({ item }: { item: MarketData }) {
       </div>
     </Link>
   );
+}
+
+function qualityLabel(item: MarketData) {
+  if (item.source === "TWSE" && item.quoteQuality === "latest") return "即時";
+  if (item.source === "TWSE" && item.quoteQuality === "partial") return "TWSE 部分盤中資料";
+  if (item.source === "FINMIND" && item.quoteQuality === "daily") return "FinMind 日資料";
+  if (item.source === "CACHE") return "快取";
+  if (item.source === "DEMO" && item.market === "TWSE") return "台股 Demo";
+  if (item.source === "DEMO") return "展示資料";
+  return item.quoteQuality?.toUpperCase() ?? "";
 }

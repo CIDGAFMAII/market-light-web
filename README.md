@@ -17,19 +17,34 @@ npm.cmd run dev -- --port 3001
 
 ## Data Providers
 
-Real providers:
+Competition data policy:
 
-- TWSE: `getStockInfo.jsp`
-- OKX Instruments: `/api/v5/public/instruments`
-- OKX Ticker: `/api/v5/market/ticker`
+- OKX Ticker is the primary real-time data source for crypto assets.
+- Taiwan stock rows are demo-only in this competition version.
+- Stable real-time Taiwan stock data usually requires a licensed or paid provider.
+- TWSE MIS and FinMind routes are kept as legacy / experimental diagnostics, not the official competition data path.
 
 OKX instruments is not a price API. It is used to validate that an instrument such as `BTC-USDT` exists and is `live`. OKX ticker is the real price API.
+
+Legacy FinMind token settings are optional:
+
+```text
+FINMIND_TOKEN=
+FINMIND_CACHE_TTL_MS=60000
+```
+
+FinMind tokens are limited to 600 API calls per hour. The legacy debug route uses `Authorization: Bearer <token>` when `FINMIND_TOKEN` is set. The competition market page does not rely on FinMind for official Taiwan stock realtime data.
+
+`FINMIND_CACHE_TTL_MS` controls the in-memory FinMind provider cache. Keep it at least `60000` ms for demos so repeated refreshes do not burn through the hourly quota. On Vercel, set `FINMIND_TOKEN` in Project Settings -> Environment Variables.
 
 Fallback order:
 
 ```text
-real provider -> cache -> demo fallback
+OKX real provider -> cache -> demo fallback
+Taiwan stock demo rows -> demo display flow
 ```
+
+TWSE MIS frequently returns `z="-"`, and FinMind `TaiwanStockPrice` is daily data, not tick-level realtime. True realtime Taiwan stock watch-board data requires a broker API, WebSocket, or licensed market-data feed. This project is a competition demo focused on low-distraction market alerts, ESP32 synchronization, OLED/RGB display, and companion interaction.
 
 Demo mode:
 
@@ -39,9 +54,10 @@ demo provider only
 
 ## Market Page
 
-`/market` is the real market watch page. It is intentionally quieter than the competition demo page and focuses on scanning live TWSE / OKX data:
+`/market` is the real market watch page for OKX crypto assets, with Taiwan stock demo rows kept to show the end-to-end device flow:
 
-- Real TWSE / OKX data from `/api/public/market`
+- Real OKX data from `/api/public/market`
+- Taiwan stock rows marked as `DEMO`
 - Real / Demo switch:
   - Real: `/api/public/market`
   - Demo: `/api/public/market?demoMode=true`
@@ -51,7 +67,8 @@ demo provider only
 - Sort by `price`, `changePercent`, or `volume`
 - Filter by market: `ALL / TWSE / OKX`
 - Filter by status: `ALL / up / down / up_alert / down_alert / calm`
-- Source display: `TWSE / OKX / CACHE / DEMO`
+- Source display: `OKX / CACHE / DEMO`
+- Quote quality display: `latest / partial / daily / fallback`
 - Stale badge for cache or fallback data
 - Refresh button
 - Loading and error states
@@ -68,10 +85,13 @@ demo provider only
 - Fallback scenario demonstration with `DEMO` / `STALE` badges
 - ESP32 JSON preview
 - Device config and device market API URL examples
+- Taiwan stock screens are demo data; the focus is ESP32 sync and alert flow.
 
 ## Watchlist
 
 `/watchlist` manages a local watchlist with `localStorage`. It is also the setup page for choosing which stocks or assets are synchronized to the ESP32 display.
+
+Competition demos should prefer OKX crypto assets. Taiwan stock entries are currently demo display data.
 
 Supported actions:
 
@@ -172,6 +192,22 @@ TWSE:
 http://localhost:3000/api/provider/twse?symbol=2330&exchange=tse
 ```
 
+Legacy / experimental only. Not the official competition realtime stock source.
+
+TWSE raw debug:
+
+```text
+http://localhost:3000/api/provider/twse?symbol=2330&exchange=tse&debug=true
+```
+
+FinMind Daily:
+
+```text
+http://localhost:3000/api/provider/finmind/daily?symbol=2330&debug=true
+```
+
+Legacy / experimental daily data only. Not tick-level realtime.
+
 OKX Instruments:
 
 ```text
@@ -246,7 +282,7 @@ http://localhost:3000/dashboard/api-debug
 
 ## Page Roles
 
-- `/market`: real market watch page for TWSE / OKX quotes.
+- `/market`: real OKX crypto watch page with Taiwan stock demo rows.
 - `/demo`: competition showcase and device interaction story.
 - `/watchlist`: choose which assets synchronize to ESP32.
 - `/dashboard/api-debug`: API testing and OLED/device preview verification.
@@ -272,7 +308,8 @@ Current scope is website MVP only:
 - Next.js App Router
 - TypeScript
 - Tailwind CSS
-- Real market provider routes
+- OKX real market provider routes
+- Taiwan stock demo display flow
 - Web dashboard and demo pages
 
 Not included yet:

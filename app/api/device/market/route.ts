@@ -4,6 +4,17 @@ import { mockDeviceSettings, mockDeviceStocks } from "@/lib/market/default-list"
 import { getMarketCollection } from "@/lib/market/service";
 import { parseSymbolsParam, parseSymbolTokens } from "@/lib/market/symbols";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const noStoreResponse = {
+  headers: {
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  },
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forcedDemoMode = searchParams.get("demoMode");
@@ -40,12 +51,14 @@ export async function GET(request: Request) {
         change: item.change,
         changePercent: item.changePercent,
         tradeTime: item.tradeTime,
+        tradeDate: item.tradeDate,
         source: item.source,
+        quoteQuality: item.quoteQuality,
         status: item.status,
         stale: item.stale,
         message: item.message,
       })),
-    });
+    }, noStoreResponse);
   } catch (error) {
     return NextResponse.json(
       {
@@ -55,7 +68,7 @@ export async function GET(request: Request) {
         items: [],
         warnings: [error instanceof Error ? error.message : "Device market route failed"],
       },
-      { status: 200 },
+      { status: 200, ...noStoreResponse },
     );
   }
 }

@@ -76,6 +76,7 @@ export default function DemoPage() {
             <Link href="/" className="text-sm uppercase tracking-[0.18em] text-cyan">← 首頁</Link>
             <h1 className="mt-4 font-orbitron text-4xl font-black uppercase text-white">裝置展示模式</h1>
             <p className="mt-3 text-muted">競賽展示用：OLED、RGB、小助手、fallback 與 ESP32 API 資料流集中在這裡。</p>
+            <p className="mt-2 text-sm text-yellow">台股畫面為展示資料，重點是呈現 ESP32 同步與提醒流程。</p>
           </div>
           <StatusBadge status={status} />
         </div>

@@ -94,6 +94,7 @@ export async function fetchOkxTicker({
       volume: parseOkxNumber(raw.vol24h),
       tradeTime: formatOkxTime(raw.ts),
       source: "OKX",
+      quoteQuality: "latest",
       status,
       message: statusMessage(status),
       stale: false,

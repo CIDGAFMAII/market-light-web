@@ -39,6 +39,7 @@ type ApiResponseObject = Record<string, unknown>;
 export function ApiDebugClient() {
   const [twseSymbol, setTwseSymbol] = useState("2330");
   const [twseExchange, setTwseExchange] = useState("tse");
+  const [finMindSymbol, setFinMindSymbol] = useState("2330");
   const [instType, setInstType] = useState("SPOT");
   const [instrumentInstId, setInstrumentInstId] = useState("BTC-USDT");
   const [tickerInstId, setTickerInstId] = useState("BTC-USDT");
@@ -49,21 +50,14 @@ export function ApiDebugClient() {
   return (
     <div className="grid gap-5">
       <TestPanel
-        title="TWSE 測試"
-        buttonLabel="TEST TWSE"
-        endpoint={`/api/provider/twse?symbol=${encodeURIComponent(twseSymbol)}&exchange=${encodeURIComponent(twseExchange)}`}
+        title="OKX Ticker 測試"
+        buttonLabel="TEST OKX"
+        endpoint={`/api/provider/okx/ticker?instId=${encodeURIComponent(tickerInstId)}`}
         previewEnabled
       >
         <label className="grid gap-2 text-sm text-muted">
-          股票代號
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={twseSymbol} onChange={(event) => setTwseSymbol(event.target.value)} />
-        </label>
-        <label className="grid gap-2 text-sm text-muted">
-          交易所
-          <select className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={twseExchange} onChange={(event) => setTwseExchange(event.target.value)}>
-            <option value="tse">tse</option>
-            <option value="otc">otc</option>
-          </select>
+          instId
+          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={tickerInstId} onChange={(event) => setTickerInstId(event.target.value)} />
         </label>
       </TestPanel>
 
@@ -83,15 +77,40 @@ export function ApiDebugClient() {
       </TestPanel>
 
       <TestPanel
-        title="OKX Ticker 測試"
-        buttonLabel="TEST OKX"
-        endpoint={`/api/provider/okx/ticker?instId=${encodeURIComponent(tickerInstId)}`}
+        title="TWSE Legacy / Demo 測試"
+        buttonLabel="TEST TWSE LEGACY"
+        endpoint={`/api/provider/twse?symbol=${encodeURIComponent(twseSymbol)}&exchange=${encodeURIComponent(twseExchange)}`}
         previewEnabled
       >
         <label className="grid gap-2 text-sm text-muted">
-          instId
-          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={tickerInstId} onChange={(event) => setTickerInstId(event.target.value)} />
+          股票代號
+          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={twseSymbol} onChange={(event) => setTwseSymbol(event.target.value)} />
         </label>
+        <label className="grid gap-2 text-sm text-muted">
+          交易所
+          <select className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={twseExchange} onChange={(event) => setTwseExchange(event.target.value)}>
+            <option value="tse">tse</option>
+            <option value="otc">otc</option>
+          </select>
+        </label>
+        <div className="rounded border border-yellow-400/30 bg-yellow/10 p-3 text-xs leading-5 text-yellow md:col-span-2">
+          Legacy / Experimental：競賽主流程不依賴台股即時資料。台股目前以 Demo 展示資料呈現同步與提醒流程。
+        </div>
+      </TestPanel>
+
+      <TestPanel
+        title="FinMind Legacy / Demo 測試"
+        buttonLabel="Test FinMind Daily"
+        endpoint={`/api/provider/finmind/daily?symbol=${encodeURIComponent(finMindSymbol)}&debug=true`}
+        previewEnabled
+      >
+        <label className="grid gap-2 text-sm text-muted">
+          股票代號
+          <input className="rounded border border-cyan/20 bg-black/40 px-3 py-2 text-cyan" value={finMindSymbol} onChange={(event) => setFinMindSymbol(event.target.value)} />
+        </label>
+        <div className="rounded border border-blue-400/30 bg-blue-400/10 p-3 text-xs leading-5 text-blue-200">
+          Legacy / Experimental：FinMind daily 不是逐筆即時價格；本版台股正式展示採 Demo 資料。
+        </div>
       </TestPanel>
 
       <TestPanel title="Public Market 測試" buttonLabel="Fetch Market API" endpoint="/api/public/market" previewEnabled />
@@ -344,5 +363,5 @@ function isPreviewStatus(value: string): value is PreviewMarketItem["status"] {
 }
 
 function isPreviewSource(value: string): value is PreviewMarketItem["source"] {
-  return ["TWSE", "OKX", "DEMO", "CACHE"].includes(value);
+  return ["TWSE", "OKX", "FINMIND", "DEMO", "CACHE"].includes(value);
 }

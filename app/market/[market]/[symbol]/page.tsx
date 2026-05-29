@@ -39,7 +39,9 @@ export default async function MarketDetailPage({ params }: PageProps) {
     low: item.low,
     volume: item.volume,
     tradeTime: item.tradeTime,
+    tradeDate: item.tradeDate,
     source: item.source,
+    quoteQuality: item.quoteQuality,
     stale: item.stale,
     status: item.status,
     oled: {
@@ -61,6 +63,7 @@ export default async function MarketDetailPage({ params }: PageProps) {
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded border border-cyan/30 px-3 py-2 text-cyan">{item.source}</span>
+            {item.quoteQuality ? <span className="rounded border border-white/15 px-3 py-2 text-muted">{item.quoteQuality.toUpperCase()}</span> : null}
             {item.stale ? <span className="rounded border border-yellow-400/40 px-3 py-2 text-yellow">STALE</span> : null}
             <StatusBadge status={item.status} />
           </div>
@@ -84,7 +87,9 @@ export default async function MarketDetailPage({ params }: PageProps) {
               <DataLine label="low" value={item.low.toLocaleString()} />
               <DataLine label="volume" value={item.volume.toLocaleString()} />
               <DataLine label="tradeTime" value={item.tradeTime} />
+              {item.tradeDate ? <DataLine label="tradeDate" value={item.tradeDate} /> : null}
               <DataLine label="source" value={item.source} />
+              <DataLine label="quoteQuality" value={item.quoteQuality ?? "-"} />
               <DataLine label="status" value={item.status} />
               <DataLine label="stale" value={item.stale ? "true" : "false"} />
             </div>
